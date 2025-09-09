@@ -38,6 +38,7 @@ import coil3.network.CacheStrategy
 import coil3.network.ConnectivityChecker
 import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
+import coil3.request.CachePolicy
 import coil3.request.ErrorResult
 import coil3.request.ImageRequest
 import coil3.request.Options
@@ -60,12 +61,18 @@ class ImageLoaderSetup {
 
         val debugLogger = if (isDebug) DebugLogger() else null
 
+        private var currentDiskCache: DiskCache? = null
+
         private val profileImageEventListener =
             object : EventListener() {
                 override fun onStart(request: ImageRequest) {
                     val url = request.data.toString()
                     if (isProfileImageUrl(url)) {
                         Log.d("ProfileImageCache", "Loading profile image: ${url.take(50)}...")
+                        Log.d("ProfileImageCache", "  - Request data: ${request.data}")
+
+                        // Check if URL exists in disk cache before loading
+                        ImageCacheFactory.checkDiskCacheForUrl(currentDiskCache, url)
                     }
                 }
 
@@ -75,13 +82,18 @@ class ImageLoaderSetup {
                 ) {
                     val url = request.data.toString()
                     if (isProfileImageUrl(url)) {
-                        val source =
-                            when (result.dataSource.name) {
-                                "MEMORY_CACHE" -> "MEMORY"
-                                "DISK_CACHE" -> "DISK"
-                                else -> "NETWORK"
-                            }
-                        Log.d("ProfileImageCache", "✓ Profile image loaded from $source: ${url.take(50)}...")
+                        Log.d("ProfileImageCache", "✓ Profile image loaded from ${result.dataSource.name}: ${url.take(50)}...")
+                        Log.d("ProfileImageCache", "  - Result drawable: ${result.image}")
+
+                        // If loaded from network, check if it gets written to disk cache
+                        if (result.dataSource.name.contains("NETWORK")) {
+                            Log.d("ProfileImageCache", "  - Image loaded from network, should be cached to disk now")
+                            // Check disk cache again after a brief delay
+                            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                ImageCacheFactory.checkDiskCacheForUrl(currentDiskCache, url)
+                                ImageCacheFactory.logCacheStats(currentDiskCache, null)
+                            }, 500)
+                        }
                     }
                 }
 
@@ -115,6 +127,11 @@ class ImageLoaderSetup {
             memoryCache: MemoryCache,
             callFactory: (url: String) -> Call.Factory,
         ) {
+            // Store disk cache reference for logging
+            currentDiskCache = diskCache
+
+            Log.d("ProfileImageCache", "Setting up ImageLoader with disk caching enabled")
+
             SingletonImageLoader.setUnsafe(
                 ImageLoader
                     .Builder(app)
@@ -123,6 +140,9 @@ class ImageLoaderSetup {
                     .precision(Precision.INEXACT)
                     .logger(debugLogger)
                     .eventListener(profileImageEventListener)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .networkCachePolicy(CachePolicy.ENABLED)
                     .components {
                         add(gifFactory)
                         add(svgFactory)

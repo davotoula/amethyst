@@ -61,12 +61,36 @@ class ImageCacheFactory {
                 val sizeBytes = it.size
                 val sizeMB = sizeBytes / (1024 * 1024)
                 Log.d("ProfileImageCache", "Disk cache stats - Used: ${sizeMB}MB")
+                Log.d("ProfileImageCache", "Disk cache directory: ${it.directory}")
+
+                // Check if disk cache directory exists and is writable
+                val cacheDir = it.directory.toFile()
+                Log.d("ProfileImageCache", "Cache dir exists: ${cacheDir.exists()}, writable: ${cacheDir.canWrite()}")
+                if (cacheDir.exists()) {
+                    val files = cacheDir.listFiles()
+                    Log.d("ProfileImageCache", "Cache dir contains ${files?.size ?: 0} files")
+                }
             }
 
             memoryCache?.let {
                 val sizeBytes = it.size
                 val sizeMB = sizeBytes / (1024 * 1024)
                 Log.d("ProfileImageCache", "Memory cache stats - Used: ${sizeMB}MB")
+            }
+        }
+
+        fun checkDiskCacheForUrl(
+            diskCache: DiskCache?,
+            url: String,
+        ) {
+            diskCache?.let { cache ->
+                try {
+                    Log.d("ProfileImageCache", "Checking disk cache for key: ${url.take(50)}...")
+                    // Note: We can't directly check if a key exists in Coil 3 disk cache
+                    // This is just a placeholder for now - the main info will come from the EventListener
+                } catch (e: Exception) {
+                    Log.w("ProfileImageCache", "Error checking disk cache for URL: ${e.message}")
+                }
             }
         }
     }
