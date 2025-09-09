@@ -62,13 +62,17 @@ class ImageLoaderSetup {
         val debugLogger = if (isDebug) DebugLogger() else null
 
         private var currentDiskCache: DiskCache? = null
+        private val loadStartTimes = mutableMapOf<String, Long>()
 
         private val profileImageEventListener =
             object : EventListener() {
                 override fun onStart(request: ImageRequest) {
                     val url = request.data.toString()
                     if (isProfileImageUrl(url)) {
-                        Log.d("ProfileImageCache", "Loading profile image: ${url.take(50)}...")
+                        val startTime = System.currentTimeMillis()
+                        loadStartTimes[url] = startTime
+
+                        Log.d("ProfileImageCache", "⏱️ Loading profile image: ${url.take(50)}...")
                         Log.d("ProfileImageCache", "  - Request data: ${request.data}")
 
                         // Check if URL exists in disk cache before loading
@@ -82,7 +86,12 @@ class ImageLoaderSetup {
                 ) {
                     val url = request.data.toString()
                     if (isProfileImageUrl(url)) {
-                        Log.d("ProfileImageCache", "✓ Profile image loaded from ${result.dataSource.name}: ${url.take(50)}...")
+                        val endTime = System.currentTimeMillis()
+                        val startTime = loadStartTimes.remove(url)
+                        val loadTimeMs = if (startTime != null) endTime - startTime else -1
+
+                        Log.d("ProfileImageCache", "✓ Profile image loaded from ${result.dataSource.name}: ${url.take(50)}... (${loadTimeMs}ms)")
+                        Log.d("ProfileImageCache", "  - Load time: ${loadTimeMs}ms")
                         Log.d("ProfileImageCache", "  - Result drawable: ${result.image}")
 
                         // If loaded from network, check if it gets written to disk cache
@@ -103,7 +112,11 @@ class ImageLoaderSetup {
                 ) {
                     val url = request.data.toString()
                     if (isProfileImageUrl(url)) {
-                        Log.w("ProfileImageCache", "✗ Profile image failed to load: ${url.take(50)}... - ${result.throwable.message}")
+                        val endTime = System.currentTimeMillis()
+                        val startTime = loadStartTimes.remove(url)
+                        val loadTimeMs = if (startTime != null) endTime - startTime else -1
+
+                        Log.w("ProfileImageCache", "✗ Profile image failed to load: ${url.take(50)}... (${loadTimeMs}ms) - ${result.throwable.message}")
                     }
                 }
 
