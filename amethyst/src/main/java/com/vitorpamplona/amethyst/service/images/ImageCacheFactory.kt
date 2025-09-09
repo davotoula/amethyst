@@ -30,15 +30,16 @@ import okio.Path.Companion.toOkioPath
 class ImageCacheFactory {
     companion object {
         fun newDisk(app: Application): DiskCache {
+            val cacheSize = 1024 * 1024 * 1024 // 1GB
             val diskCache =
                 DiskCache
                     .Builder()
                     .directory(app.safeCacheDir().resolve("image_cache").toOkioPath())
                     .maxSizePercent(0.2)
-                    .maximumMaxSizeBytes(1024 * 1024 * 1024) // 1GB
+                    .maximumMaxSizeBytes(cacheSize.toLong())
                     .build()
 
-            Log.d("ProfileImageCache", "Disk cache initialized - Directory: ${diskCache.directory}")
+            Log.d("ProfileImageCache", "Disk cache initialized - Directory: ${diskCache.directory}, Size: ${cacheSize / (1024 * 1024)}MB (Android ${android.os.Build.VERSION.SDK_INT})")
             return diskCache
         }
 
@@ -66,9 +67,40 @@ class ImageCacheFactory {
                 // Check if disk cache directory exists and is writable
                 val cacheDir = it.directory.toFile()
                 Log.d("ProfileImageCache", "Cache dir exists: ${cacheDir.exists()}, writable: ${cacheDir.canWrite()}")
+
                 if (cacheDir.exists()) {
                     val files = cacheDir.listFiles()
-                    Log.d("ProfileImageCache", "Cache dir contains ${files?.size ?: 0} files")
+                    val fileCount = files?.size ?: 0
+                    Log.d("ProfileImageCache", "Cache dir contains $fileCount files")
+
+                    // Check available disk space
+                    val freeSpaceBytes = cacheDir.freeSpace
+                    val freeSpaceMB = freeSpaceBytes / (1024 * 1024)
+                    Log.d("ProfileImageCache", "Available disk space: ${freeSpaceMB}MB")
+
+                    // Warn if cache is getting large (80% of limit)
+                    val warningThreshold =
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                            80 // 80% of 100MB for Android Q+
+                        } else {
+                            160 // 80% of 200MB for older Android
+                        }
+
+                    if (sizeMB > warningThreshold) {
+                        val maxSize = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) "100MB" else "200MB"
+                        Log.w("ProfileImageCache", "⚠️  CACHE SIZE WARNING: ${sizeMB}MB is approaching $maxSize limit")
+                    }
+
+                    // Warn if very low disk space
+                    if (freeSpaceMB < 100) {
+                        Log.e("ProfileImageCache", "🚨 LOW DISK SPACE: Only ${freeSpaceMB}MB available")
+                        Log.e("ProfileImageCache", "  - This may cause image loading failures")
+                    }
+
+                    // Warn if too many files (could slow down filesystem operations)
+                    if (fileCount > 5000) {
+                        Log.w("ProfileImageCache", "⚠️  HIGH FILE COUNT: $fileCount files may slow cache operations")
+                    }
                 }
             }
 

@@ -116,7 +116,25 @@ class ImageLoaderSetup {
                         val startTime = loadStartTimes.remove(url)
                         val loadTimeMs = if (startTime != null) endTime - startTime else -1
 
-                        Log.w("ProfileImageCache", "✗ Profile image failed to load: ${url.take(50)}... (${loadTimeMs}ms) - ${result.throwable.message}")
+                        val errorMsg = result.throwable.message ?: "Unknown error"
+                        Log.w("ProfileImageCache", "✗ Profile image failed to load: ${url.take(50)}... (${loadTimeMs}ms) - $errorMsg")
+
+                        // Check for cache-related errors
+                        if (errorMsg.contains("cache", ignoreCase = true) ||
+                            errorMsg.contains("disk", ignoreCase = true) ||
+                            errorMsg.contains("space", ignoreCase = true) ||
+                            errorMsg.contains("full", ignoreCase = true) ||
+                            errorMsg.contains("IOException", ignoreCase = true) ||
+                            errorMsg.contains("pinning", ignoreCase = true) ||
+                            errorMsg.contains("trim", ignoreCase = true)
+                        ) {
+                            Log.e("ProfileImageCache", "🚨 CACHE-RELATED ERROR DETECTED: $errorMsg")
+                            Log.e("ProfileImageCache", "  - This might indicate cache is full or corrupted")
+                            Log.e("ProfileImageCache", "  - URL: $url")
+
+                            // Log current cache stats to understand the situation
+                            ImageCacheFactory.logCacheStats(currentDiskCache, null)
+                        }
                     }
                 }
 
