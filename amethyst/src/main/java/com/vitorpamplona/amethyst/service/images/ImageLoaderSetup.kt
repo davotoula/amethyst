@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.service.images
 
 import android.app.Application
 import android.os.Build
+import android.util.Log
+import coil3.EventListener
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.Uri
@@ -36,7 +38,10 @@ import coil3.network.CacheStrategy
 import coil3.network.ConnectivityChecker
 import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
+import coil3.request.ErrorResult
+import coil3.request.ImageRequest
 import coil3.request.Options
+import coil3.request.SuccessResult
 import coil3.size.Precision
 import coil3.svg.SvgDecoder
 import coil3.util.DebugLogger
@@ -55,6 +60,54 @@ class ImageLoaderSetup {
 
         val debugLogger = if (isDebug) DebugLogger() else null
 
+        private val profileImageEventListener =
+            object : EventListener() {
+                override fun onStart(request: ImageRequest) {
+                    val url = request.data.toString()
+                    if (isProfileImageUrl(url)) {
+                        Log.d("ProfileImageCache", "Loading profile image: ${url.take(50)}...")
+                    }
+                }
+
+                override fun onSuccess(
+                    request: ImageRequest,
+                    result: SuccessResult,
+                ) {
+                    val url = request.data.toString()
+                    if (isProfileImageUrl(url)) {
+                        val source =
+                            when (result.dataSource.name) {
+                                "MEMORY_CACHE" -> "MEMORY"
+                                "DISK_CACHE" -> "DISK"
+                                else -> "NETWORK"
+                            }
+                        Log.d("ProfileImageCache", "✓ Profile image loaded from $source: ${url.take(50)}...")
+                    }
+                }
+
+                override fun onError(
+                    request: ImageRequest,
+                    result: ErrorResult,
+                ) {
+                    val url = request.data.toString()
+                    if (isProfileImageUrl(url)) {
+                        Log.w("ProfileImageCache", "✗ Profile image failed to load: ${url.take(50)}... - ${result.throwable.message}")
+                    }
+                }
+
+                private fun isProfileImageUrl(url: String): Boolean =
+                    url.startsWith("http") &&
+                        (
+                            url.contains("/profile") ||
+                                url.contains("avatar") ||
+                                url.contains("picture") ||
+                                url.contains(".jpg") ||
+                                url.contains(".png") ||
+                                url.contains(".webp") ||
+                                url.contains(".gif")
+                        )
+            }
+
         @OptIn(DelicateCoilApi::class)
         fun setup(
             app: Application,
@@ -69,6 +122,7 @@ class ImageLoaderSetup {
                     .memoryCache { memoryCache }
                     .precision(Precision.INEXACT)
                     .logger(debugLogger)
+                    .eventListener(profileImageEventListener)
                     .components {
                         add(gifFactory)
                         add(svgFactory)

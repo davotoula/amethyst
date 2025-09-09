@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.images
 
 import android.app.Application
+import android.util.Log
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import com.vitorpamplona.amethyst.service.safeCacheDir
@@ -28,18 +29,45 @@ import okio.Path.Companion.toOkioPath
 
 class ImageCacheFactory {
     companion object {
-        fun newDisk(app: Application): DiskCache =
-            DiskCache
-                .Builder()
-                .directory(app.safeCacheDir().resolve("image_cache").toOkioPath())
-                .maxSizePercent(0.2)
-                .maximumMaxSizeBytes(1024 * 1024 * 1024) // 1GB
-                .build()
+        fun newDisk(app: Application): DiskCache {
+            val diskCache =
+                DiskCache
+                    .Builder()
+                    .directory(app.safeCacheDir().resolve("image_cache").toOkioPath())
+                    .maxSizePercent(0.2)
+                    .maximumMaxSizeBytes(1024 * 1024 * 1024) // 1GB
+                    .build()
 
-        fun newMemory(app: Application): MemoryCache =
-            MemoryCache
-                .Builder()
-                .maxSizePercent(app)
-                .build()
+            Log.d("ProfileImageCache", "Disk cache initialized - Directory: ${diskCache.directory}")
+            return diskCache
+        }
+
+        fun newMemory(app: Application): MemoryCache {
+            val memoryCache =
+                MemoryCache
+                    .Builder()
+                    .maxSizePercent(app)
+                    .build()
+
+            Log.d("ProfileImageCache", "Memory cache initialized")
+            return memoryCache
+        }
+
+        fun logCacheStats(
+            diskCache: DiskCache?,
+            memoryCache: MemoryCache?,
+        ) {
+            diskCache?.let {
+                val sizeBytes = it.size
+                val sizeMB = sizeBytes / (1024 * 1024)
+                Log.d("ProfileImageCache", "Disk cache stats - Used: ${sizeMB}MB")
+            }
+
+            memoryCache?.let {
+                val sizeBytes = it.size
+                val sizeMB = sizeBytes / (1024 * 1024)
+                Log.d("ProfileImageCache", "Memory cache stats - Used: ${sizeMB}MB")
+            }
+        }
     }
 }

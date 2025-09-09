@@ -50,7 +50,6 @@ import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.Notify
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.speedLogger.RelaySpeedLogger
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
-import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav.scope
 import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -201,6 +200,7 @@ class Amethyst : Application() {
         applicationIOScope.launch {
             diskCache
             videoCache
+            ImageCacheFactory.logCacheStats(diskCache, memoryCache)
         }
 
         // registers to receive events

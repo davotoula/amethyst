@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
+import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -347,6 +349,14 @@ fun InnerUserPicture(
         remember {
             modifier.size(size).clip(shape = CircleShape)
         }
+
+    LaunchedEffect(userPicture) {
+        if (userPicture != null) {
+            Log.d("ProfileImageCache", "Rendering profile picture for user ${userHex.take(8)}... - URL: ${userPicture.take(50)}... - Name: $userName - LoadingEnabled: ${accountViewModel.settings.showProfilePictures.value}")
+        } else {
+            Log.d("ProfileImageCache", "No profile picture URL for user ${userHex.take(8)}... - Name: $userName - Fallback to robohash")
+        }
+    }
 
     RobohashFallbackAsyncImage(
         robot = userHex,
