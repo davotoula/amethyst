@@ -78,10 +78,10 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.vitorpamplona.amethyst.commons.ui.screens.MessagesPlaceholder
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.BookmarksScreen
@@ -94,6 +94,7 @@ import com.vitorpamplona.amethyst.desktop.ui.SearchScreen
 import com.vitorpamplona.amethyst.desktop.ui.ThreadScreen
 import com.vitorpamplona.amethyst.desktop.ui.UserProfileScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
+import com.vitorpamplona.amethyst.desktop.ui.chats.DesktopMessagesScreen
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
@@ -507,7 +508,17 @@ fun MainContent(
                     }
 
                     DesktopScreen.Messages -> {
-                        MessagesPlaceholder()
+                        val iAccount =
+                            remember(account, localCache) {
+                                DesktopIAccount(account, localCache)
+                            }
+                        DesktopMessagesScreen(
+                            account = iAccount,
+                            cacheProvider = localCache,
+                            onNavigateToProfile = { pubKeyHex ->
+                                onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
+                            },
+                        )
                     }
 
                     DesktopScreen.Notifications -> {

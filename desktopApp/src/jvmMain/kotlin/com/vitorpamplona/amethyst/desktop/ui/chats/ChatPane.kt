@@ -1,0 +1,504 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.desktop.ui.chats
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.ui.chat.ChatMessageCompose
+import com.vitorpamplona.amethyst.commons.ui.chat.ChatroomHeader
+import com.vitorpamplona.amethyst.commons.ui.chat.GroupChatroomHeader
+import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.util.toTimeAgo
+import com.vitorpamplona.amethyst.commons.viewmodels.ChatNewMessageState
+import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import kotlinx.coroutines.launch
+
+private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
+
+/**
+ * Right panel of the DM split-pane layout (flexible width).
+ *
+ * Displays:
+ * - ChatroomHeader at top (shared component from commons)
+ * - Message list (LazyColumn, reversed - newest at bottom, auto-scroll)
+ * - Message input at bottom with Send button and NIP-17 toggle
+ *
+ * @param roomKey The chatroom key for the selected conversation
+ * @param account The user's account (IAccount)
+ * @param cacheProvider The cache provider for user/note lookups
+ * @param feedViewModel ChatroomFeedViewModel for message data
+ * @param messageState ChatNewMessageState for composition
+ * @param onNavigateToProfile Called when user clicks on a profile
+ */
+@Composable
+fun ChatPane(
+    roomKey: ChatroomKey,
+    account: IAccount,
+    cacheProvider: ICacheProvider,
+    feedViewModel: ChatroomFeedViewModel,
+    messageState: ChatNewMessageState,
+    onNavigateToProfile: (String) -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    val scope = rememberCoroutineScope()
+    val feedState by feedViewModel.feedState.feedContent.collectAsState()
+    val messageText by messageState.message.collectAsState()
+    val isNip17 by messageState.nip17.collectAsState()
+    val requiresNip17 by messageState.requiresNip17.collectAsState()
+
+    // Resolve users for the header
+    val users = roomKey.users.mapNotNull { cacheProvider.getUserIfExists(it) as? User }
+    val isGroup = users.size > 1
+
+    // Load room into message state
+    LaunchedEffect(roomKey) {
+        messageState.load(roomKey)
+    }
+
+    Column(modifier = modifier.fillMaxSize()) {
+        // Header
+        if (isGroup) {
+            GroupChatroomHeader(
+                users = users,
+                onClick = { users.firstOrNull()?.let { onNavigateToProfile(it.pubkeyHex) } },
+            )
+        } else {
+            users.firstOrNull()?.let { user ->
+                ChatroomHeader(
+                    user = user,
+                    onClick = { onNavigateToProfile(user.pubkeyHex) },
+                )
+            } ?: run {
+                // Fallback header with raw pubkey
+                Text(
+                    text = roomKey.users.firstOrNull()?.take(20) ?: "Unknown",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(10.dp),
+                )
+            }
+        }
+
+        HorizontalDivider()
+
+        // Message list
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            when (feedState) {
+                is FeedState.Loading -> {
+                    LoadingState("Loading messages...")
+                }
+
+                is FeedState.Empty -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            "No messages yet. Send the first one!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                is FeedState.Loaded -> {
+                    val loaded = feedState as FeedState.Loaded
+                    val loadedState by loaded.feed.collectAsState()
+                    val messages = loadedState.list
+
+                    MessageList(
+                        messages = messages,
+                        account = account,
+                        cacheProvider = cacheProvider,
+                        onAuthorClick = onNavigateToProfile,
+                    )
+                }
+
+                is FeedState.FeedError -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            "Error loading messages",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider()
+
+        // Message input
+        MessageInput(
+            messageText = messageText.text,
+            isNip17 = isNip17,
+            requiresNip17 = requiresNip17,
+            canSend = messageState.canSend,
+            onMessageChange = { messageState.updateMessage(messageText.copy(text = it)) },
+            onToggleNip17 = { messageState.toggleNip17() },
+            onSend = {
+                scope.launch {
+                    if (messageState.send()) {
+                        messageState.clear()
+                    }
+                }
+            },
+        )
+    }
+}
+
+/**
+ * Scrollable message list, reversed so newest messages appear at the bottom.
+ */
+@Composable
+private fun MessageList(
+    messages: List<Note>,
+    account: IAccount,
+    cacheProvider: ICacheProvider,
+    onAuthorClick: (String) -> Unit,
+    onReaction: (Note, String) -> Unit = { _, _ -> },
+) {
+    val listState = rememberLazyListState()
+
+    // Auto-scroll to bottom when new messages arrive
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(0)
+        }
+    }
+
+    LazyColumn(
+        state = listState,
+        reverseLayout = true,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = Modifier.fillMaxSize().padding(vertical = 4.dp),
+    ) {
+        items(messages, key = { it.idHex }) { note ->
+            val isMe = note.author?.pubkeyHex == account.pubKey
+            val isDraft = note.isDraft()
+
+            MessageWithReactions(
+                note = note,
+                isMe = isMe,
+                isDraft = isDraft,
+                onAuthorClick = onAuthorClick,
+                onReaction = { emoji -> onReaction(note, emoji) },
+            )
+        }
+    }
+}
+
+/**
+ * Common reaction emojis for quick access.
+ */
+private val QUICK_REACTIONS =
+    listOf(
+        "\uD83D\uDC4D", // thumbs up
+        "\u2764\uFE0F", // red heart
+        "\uD83D\uDE02", // face with tears of joy
+        "\uD83D\uDD25", // fire
+    )
+
+/**
+ * Wraps a ChatMessageCompose with hover-triggered reaction bar.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun MessageWithReactions(
+    note: Note,
+    isMe: Boolean,
+    isDraft: Boolean,
+    onAuthorClick: (String) -> Unit,
+    onReaction: (String) -> Unit,
+) {
+    var isHovered by remember { mutableStateOf(false) }
+
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .onPointerEvent(PointerEventType.Enter) { isHovered = true }
+                .onPointerEvent(PointerEventType.Exit) { isHovered = false },
+    ) {
+        ChatMessageCompose(
+            note = note,
+            isLoggedInUser = isMe,
+            isDraft = isDraft,
+            isComplete = true,
+            drawAuthorInfo = !isMe,
+            onClick = { false },
+            onAuthorClick = {
+                note.author?.pubkeyHex?.let { onAuthorClick(it) }
+            },
+            authorLine = {
+                note.author?.let { author ->
+                    Text(
+                        text = author.toBestDisplayName(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            },
+            detailRow = {
+                note.createdAt()?.let { timestamp ->
+                    Text(
+                        text = timestamp.toTimeAgo(withDot = false),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    )
+                }
+            },
+        ) { _ ->
+            // Message body content
+            Text(
+                text = note.event?.content ?: "",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+
+        // Reaction bar - shown on hover, positioned at top-right for others' messages,
+        // top-left for own messages
+        AnimatedVisibility(
+            visible = isHovered && !isDraft,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier =
+                Modifier
+                    .align(if (isMe) Alignment.TopStart else Alignment.TopEnd)
+                    .offset(
+                        x = if (isMe) 8.dp else (-8).dp,
+                        y = (-4).dp,
+                    ),
+        ) {
+            ReactionBar(onReaction = onReaction)
+        }
+    }
+}
+
+/**
+ * Floating row of quick emoji reaction buttons.
+ */
+@Composable
+private fun ReactionBar(onReaction: (String) -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shadowElevation = 2.dp,
+        tonalElevation = 2.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(0.dp),
+        ) {
+            QUICK_REACTIONS.forEach { emoji ->
+                TextButton(
+                    onClick = {
+                        // TODO: Wire up NIP17Factory.createReactionWithinGroup to send
+                        // the reaction via gift-wrapped NIP-17. Requires:
+                        // 1. Get the note's event as EventHintBundle
+                        // 2. Get the room participants as List<HexKey>
+                        // 3. Get the NostrSigner from the account
+                        // 4. Call NIP17Factory().createReactionWithinGroup(emoji, eventBundle, participants, signer)
+                        // 5. Broadcast the resulting wraps via relay manager
+                        onReaction(emoji)
+                    },
+                    modifier = Modifier.size(32.dp),
+                    contentPadding =
+                        androidx.compose.foundation.layout
+                            .PaddingValues(0.dp),
+                ) {
+                    Text(
+                        text = emoji,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Message input area at the bottom of the chat pane.
+ */
+@Composable
+private fun MessageInput(
+    messageText: String,
+    isNip17: Boolean,
+    requiresNip17: Boolean,
+    canSend: Boolean,
+    onMessageChange: (String) -> Unit,
+    onToggleNip17: () -> Unit,
+    onSend: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedTextField(
+                value = messageText,
+                onValueChange = onMessageChange,
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .onPreviewKeyEvent { event ->
+                            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                            // Cmd+Enter (Mac) or Ctrl+Enter to send
+                            val hasModifier = if (isMacOS) event.isMetaPressed else event.isCtrlPressed
+                            if (event.key == Key.Enter && hasModifier) {
+                                if (canSend) onSend()
+                                true
+                            } else {
+                                false
+                            }
+                        },
+                placeholder = { Text("Message... (${if (isMacOS) "\u2318" else "Ctrl"}+Enter to send)") },
+                singleLine = false,
+                maxLines = 4,
+                shape = RoundedCornerShape(12.dp),
+            )
+
+            IconButton(
+                onClick = onSend,
+                enabled = canSend,
+                modifier = Modifier.size(40.dp),
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Send",
+                    tint =
+                        if (canSend) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        },
+                )
+            }
+        }
+
+        // NIP-17 indicator
+        Spacer(Modifier.height(4.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 4.dp),
+        ) {
+            IconButton(
+                onClick = onToggleNip17,
+                enabled = !requiresNip17,
+                modifier = Modifier.size(20.dp),
+            ) {
+                Icon(
+                    imageVector = if (isNip17) Icons.Default.Lock else Icons.Default.LockOpen,
+                    contentDescription = if (isNip17) "NIP-17 (encrypted)" else "NIP-04 (legacy)",
+                    modifier = Modifier.size(16.dp),
+                    tint =
+                        if (isNip17) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        },
+                )
+            }
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = if (isNip17) "NIP-17" else "NIP-04",
+                style = MaterialTheme.typography.labelSmall,
+                color =
+                    if (isNip17) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    },
+            )
+            if (requiresNip17) {
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = "(required for groups)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                )
+            }
+        }
+    }
+}

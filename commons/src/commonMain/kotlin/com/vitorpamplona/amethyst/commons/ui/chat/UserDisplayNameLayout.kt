@@ -18,24 +18,33 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal
+package com.vitorpamplona.amethyst.commons.ui.chat
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.vitorpamplona.amethyst.commons.model.Channel
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal.ListChangeFeedViewModel
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatAuthorBox
+import com.vitorpamplona.amethyst.commons.ui.theme.ChatStdHorzSpacer
 
-class ChannelFeedViewModel(
-    val channel: Channel,
-    val account: Account,
-) : ListChangeFeedViewModel(ChannelFeedFilter(channel, account), LocalCache) {
-    class Factory(
-        val channel: Channel,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = ChannelFeedViewModel(channel, account) as T
+/**
+ * Layout for displaying a user's picture and name in a chat message author line.
+ * Shared between Android and Desktop.
+ *
+ * The picture slot uses a BoxScope so callers can overlay badges/icons
+ * (e.g., following indicator, user cards) on top of the avatar.
+ */
+@Composable
+fun UserDisplayNameLayout(
+    picture: @Composable BoxScope.() -> Unit,
+    name: @Composable () -> Unit,
+) {
+    Box(ChatAuthorBox, contentAlignment = Alignment.TopEnd) {
+        picture()
     }
+
+    Spacer(modifier = ChatStdHorzSpacer)
+
+    name()
 }
