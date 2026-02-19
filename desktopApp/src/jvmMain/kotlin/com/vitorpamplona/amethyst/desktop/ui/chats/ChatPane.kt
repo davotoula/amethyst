@@ -79,6 +79,8 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.ui.chat.ChatMessageCompose
 import com.vitorpamplona.amethyst.commons.ui.chat.ChatroomHeader
+import com.vitorpamplona.amethyst.commons.ui.chat.DmBroadcastBanner
+import com.vitorpamplona.amethyst.commons.ui.chat.DmBroadcastStatus
 import com.vitorpamplona.amethyst.commons.ui.chat.GroupChatroomHeader
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -114,6 +116,7 @@ fun ChatPane(
     cacheProvider: ICacheProvider,
     feedViewModel: ChatroomFeedViewModel,
     messageState: ChatNewMessageState,
+    dmBroadcastStatus: DmBroadcastStatus = DmBroadcastStatus.Idle,
     onNavigateToProfile: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -156,6 +159,9 @@ fun ChatPane(
         }
 
         HorizontalDivider()
+
+        // Broadcast status banner
+        DmBroadcastBanner(status = dmBroadcastStatus)
 
         // Message list
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {

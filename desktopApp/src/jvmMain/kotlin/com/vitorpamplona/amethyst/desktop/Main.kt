@@ -96,12 +96,14 @@ import com.vitorpamplona.amethyst.desktop.ui.ThreadScreen
 import com.vitorpamplona.amethyst.desktop.ui.UserProfileScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.chats.DesktopMessagesScreen
+import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
@@ -284,10 +286,16 @@ fun App(
         }
     }
 
-    // Subscribe to DMs when user logs in
+    // Subscribe to DMs when user logs in; unsubscribe on account change
     LaunchedEffect(accountState) {
+        // Clean up previous DM subscriptions on any account change (logout, switch)
+        subscriptionsCoordinator.unsubscribeFromDms()
+
         val currentAccount = accountState
         if (currentAccount is AccountState.LoggedIn) {
+            // Wait for at least one relay to connect before subscribing
+            relayManager.connectedRelays.first { it.isNotEmpty() }
+
             val dmRelayState =
                 DesktopDmRelayState(
                     dmRelayList = kotlinx.coroutines.flow.MutableStateFlow(emptySet()),
@@ -535,9 +543,13 @@ fun MainContent(
                     }
 
                     DesktopScreen.Messages -> {
+                        val dmSendTracker =
+                            remember(relayManager) {
+                                DmSendTracker(relayManager.client)
+                            }
                         val iAccount =
-                            remember(account, localCache, relayManager) {
-                                DesktopIAccount(account, localCache, relayManager)
+                            remember(account, localCache, relayManager, dmSendTracker) {
+                                DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope)
                             }
                         DesktopMessagesScreen(
                             account = iAccount,

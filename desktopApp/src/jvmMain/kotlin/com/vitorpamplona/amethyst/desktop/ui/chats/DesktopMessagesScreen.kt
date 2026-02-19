@@ -54,8 +54,10 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
+import com.vitorpamplona.amethyst.commons.ui.chat.DmBroadcastStatus
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatNewMessageState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
+import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
 
@@ -138,12 +140,22 @@ fun DesktopMessagesScreen(
                         ChatNewMessageState(account, cacheProvider, scope)
                     }
 
+                val broadcastStatus =
+                    if (account is DesktopIAccount) {
+                        account.dmSendTracker.status
+                            .collectAsState()
+                            .value
+                    } else {
+                        DmBroadcastStatus.Idle
+                    }
+
                 ChatPane(
                     roomKey = currentRoom,
                     account = account,
                     cacheProvider = cacheProvider,
                     feedViewModel = feedViewModel,
                     messageState = messageState,
+                    dmBroadcastStatus = broadcastStatus,
                     onNavigateToProfile = onNavigateToProfile,
                 )
             } else {

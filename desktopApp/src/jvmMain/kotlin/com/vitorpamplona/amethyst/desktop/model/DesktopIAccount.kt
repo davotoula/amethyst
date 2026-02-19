@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -41,6 +42,8 @@ import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.DualCase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 /**
  * Desktop implementation of IAccount.
@@ -55,6 +58,8 @@ class DesktopIAccount(
     private val accountState: AccountState.LoggedIn,
     private val localCache: DesktopLocalCache,
     private val relayManager: RelayConnectionManager,
+    val dmSendTracker: DmSendTracker,
+    private val scope: CoroutineScope,
 ) : IAccount {
     override val signer: NostrSigner = accountState.signer
 
@@ -114,7 +119,7 @@ class DesktopIAccount(
             }
         }
 
-        relayManager.send(signedEvent, targetRelays)
+        scope.launch { dmSendTracker.sendAndTrack(signedEvent, targetRelays) }
     }
 
     override suspend fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>) {
@@ -122,7 +127,7 @@ class DesktopIAccount(
 
         val result = NIP17Factory().createMessageNIP17(template, signer)
 
-        // Broadcast each gift wrap to the recipient's inbox relays
+        // Broadcast each gift wrap to the recipient's inbox relays with tracking
         result.wraps.forEach { wrap ->
             val recipientKey = wrap.recipientPubKey()
             val targetRelays =
@@ -138,7 +143,7 @@ class DesktopIAccount(
                     relayManager.connectedRelays.value
                 }
 
-            relayManager.send(wrap, targetRelays)
+            scope.launch { dmSendTracker.sendAndTrack(wrap, targetRelays) }
         }
     }
 
@@ -158,7 +163,7 @@ class DesktopIAccount(
                     relayManager.connectedRelays.value
                 }
 
-            relayManager.send(wrap, targetRelays)
+            scope.launch { dmSendTracker.sendAndTrack(wrap, targetRelays) }
         }
     }
 }
