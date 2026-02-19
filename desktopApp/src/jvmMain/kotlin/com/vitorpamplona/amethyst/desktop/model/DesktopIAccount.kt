@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.DualCase
 
 /**
@@ -123,6 +124,26 @@ class DesktopIAccount(
 
         // Broadcast each gift wrap to the recipient's inbox relays
         result.wraps.forEach { wrap ->
+            val recipientKey = wrap.recipientPubKey()
+            val targetRelays =
+                if (recipientKey != null) {
+                    val dmRelays =
+                        localCache
+                            .getOrCreateUser(recipientKey)
+                            .dmInboxRelays()
+                            ?.toSet()
+                    dmRelays?.ifEmpty { null }
+                        ?: relayManager.connectedRelays.value
+                } else {
+                    relayManager.connectedRelays.value
+                }
+
+            relayManager.send(wrap, targetRelays)
+        }
+    }
+
+    override suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>) {
+        wraps.forEach { wrap ->
             val recipientKey = wrap.recipientPubKey()
             val targetRelays =
                 if (recipientKey != null) {

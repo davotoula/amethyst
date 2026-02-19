@@ -1578,6 +1578,13 @@ class Account(
         broadcastPrivately(events)
     }
 
+    override suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>) {
+        wraps.forEach { wrap ->
+            val relayList = computeRelayListToBroadcast(wrap)
+            client.send(wrap, relayList)
+        }
+    }
+
     suspend fun broadcastPrivately(signedEvents: NIP17Factory.Result) {
         val mine = signedEvents.wraps.filter { (it.recipientPubKey() == signer.pubKey) }
 

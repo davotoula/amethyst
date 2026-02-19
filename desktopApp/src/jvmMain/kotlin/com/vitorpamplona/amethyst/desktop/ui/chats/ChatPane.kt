@@ -383,11 +383,7 @@ private suspend fun sendWrappedReaction(
             signer = account.signer,
         )
 
-    // Send each gift wrap as a NIP-17 message
-    result.wraps.forEach { wrap ->
-        // Broadcast through the account's NIP-17 send path
-        // The wraps are already gift-wrapped, so we broadcast directly
-    }
+    account.sendGiftWraps(result.wraps)
 }
 
 /**

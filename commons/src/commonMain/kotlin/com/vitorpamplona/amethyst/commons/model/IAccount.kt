@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.Response
 import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.DualCase
 
 /**
@@ -106,4 +107,7 @@ interface IAccount {
 
     /** Send a NIP-17 gift-wrapped direct message */
     suspend fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>)
+
+    /** Broadcast pre-created gift wraps (e.g. reactions within group DMs) */
+    suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>)
 }
