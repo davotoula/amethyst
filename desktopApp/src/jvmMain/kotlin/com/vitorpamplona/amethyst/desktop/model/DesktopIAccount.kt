@@ -27,9 +27,11 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.LnZapPaymentResponseEvent
@@ -46,12 +48,12 @@ import com.vitorpamplona.quartz.utils.DualCase
  * shared IAccount interface used by commons ViewModels (ChatroomFeedViewModel,
  * ChatNewMessageState, etc.).
  *
- * For now, DM sending is a no-op stub that logs intent. Full send support
- * requires wiring through the relay client, which is a follow-up step.
+ * Bridges the desktop relay client for DM sending (NIP-04 and NIP-17).
  */
 class DesktopIAccount(
     private val accountState: AccountState.LoggedIn,
     private val localCache: DesktopLocalCache,
+    private val relayManager: RelayConnectionManager,
 ) : IAccount {
     override val signer: NostrSigner = accountState.signer
 
@@ -98,14 +100,44 @@ class DesktopIAccount(
     }
 
     override suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<PrivateDmEvent>) {
-        // TODO: Wire through relay client for actual NIP-04 DM sending
-        com.vitorpamplona.quartz.utils.Log
-            .d("DesktopIAccount", "sendNip04PrivateMessage (stub)")
+        if (!isWriteable()) return
+
+        val signedEvent = signer.sign<PrivateDmEvent>(eventTemplate)
+        val recipient = signedEvent.verifiedRecipientPubKey()
+
+        // Broadcast to connected relays + recipient's DM inbox relays
+        val targetRelays = relayManager.connectedRelays.value.toMutableSet()
+        if (recipient != null) {
+            localCache.getOrCreateUser(recipient).dmInboxRelays()?.let {
+                targetRelays.addAll(it)
+            }
+        }
+
+        relayManager.send(signedEvent, targetRelays)
     }
 
     override suspend fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>) {
-        // TODO: Wire through relay client for actual NIP-17 DM sending
-        com.vitorpamplona.quartz.utils.Log
-            .d("DesktopIAccount", "sendNip17PrivateMessage (stub)")
+        if (!isWriteable()) return
+
+        val result = NIP17Factory().createMessageNIP17(template, signer)
+
+        // Broadcast each gift wrap to the recipient's inbox relays
+        result.wraps.forEach { wrap ->
+            val recipientKey = wrap.recipientPubKey()
+            val targetRelays =
+                if (recipientKey != null) {
+                    val dmRelays =
+                        localCache
+                            .getOrCreateUser(recipientKey)
+                            .dmInboxRelays()
+                            ?.toSet()
+                    dmRelays?.ifEmpty { null }
+                        ?: relayManager.connectedRelays.value
+                } else {
+                    relayManager.connectedRelays.value
+                }
+
+            relayManager.send(wrap, targetRelays)
+        }
     }
 }

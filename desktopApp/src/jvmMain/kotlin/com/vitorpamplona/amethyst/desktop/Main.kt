@@ -81,6 +81,7 @@ import androidx.compose.ui.window.rememberWindowState
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
@@ -280,6 +281,32 @@ fun App(
         onDispose {
             subscriptionsCoordinator.clear()
             relayManager.disconnect()
+        }
+    }
+
+    // Subscribe to DMs when user logs in
+    LaunchedEffect(accountState) {
+        val currentAccount = accountState
+        if (currentAccount is AccountState.LoggedIn) {
+            val dmRelayState =
+                DesktopDmRelayState(
+                    dmRelayList = kotlinx.coroutines.flow.MutableStateFlow(emptySet()),
+                    connectedRelays = relayManager.connectedRelays,
+                    scope = scope,
+                )
+            subscriptionsCoordinator.subscribeToDms(
+                userPubKeyHex = currentAccount.pubKeyHex,
+                dmRelayState = dmRelayState,
+                onDmEvent = { event, relay ->
+                    // Store event as a note in cache so ChatroomFeedViewModel can display it
+                    val note = localCache.getOrCreateNote(event.id)
+                    val author = localCache.getOrCreateUser(event.pubKey)
+                    if (note.event == null) {
+                        note.loadEvent(event, author, emptyList())
+                        note.addRelay(relay)
+                    }
+                },
+            )
         }
     }
 
@@ -509,8 +536,8 @@ fun MainContent(
 
                     DesktopScreen.Messages -> {
                         val iAccount =
-                            remember(account, localCache) {
-                                DesktopIAccount(account, localCache)
+                            remember(account, localCache, relayManager) {
+                                DesktopIAccount(account, localCache, relayManager)
                             }
                         DesktopMessagesScreen(
                             account = iAccount,

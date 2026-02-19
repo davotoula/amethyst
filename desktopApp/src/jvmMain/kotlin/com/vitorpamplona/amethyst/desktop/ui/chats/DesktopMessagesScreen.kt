@@ -35,8 +35,10 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -80,6 +82,7 @@ fun DesktopMessagesScreen(
         }
     val selectedRoom by listState.selectedRoom.collectAsState()
     val listFocusRequester = remember { FocusRequester() }
+    var showNewDmDialog by remember { mutableStateOf(false) }
 
     Row(
         modifier =
@@ -98,7 +101,7 @@ fun DesktopMessagesScreen(
 
                         // Cmd+Shift+N / Ctrl+Shift+N -> new DM
                         event.key == Key.N && isModifier && event.isShiftPressed -> {
-                            // TODO: trigger new DM dialog when implemented
+                            showNewDmDialog = true
                             true
                         }
 
@@ -115,6 +118,7 @@ fun DesktopMessagesScreen(
             onConversationSelected = { roomKey ->
                 listState.selectRoom(roomKey)
             },
+            onNewConversation = { showNewDmDialog = true },
             focusRequester = listFocusRequester,
         )
 
@@ -147,6 +151,17 @@ fun DesktopMessagesScreen(
                 EmptyConversationState()
             }
         }
+    }
+
+    if (showNewDmDialog) {
+        NewDmDialog(
+            cacheProvider = cacheProvider,
+            onUserSelected = { roomKey ->
+                listState.selectRoom(roomKey)
+                showNewDmDialog = false
+            },
+            onDismiss = { showNewDmDialog = false },
+        )
     }
 }
 
