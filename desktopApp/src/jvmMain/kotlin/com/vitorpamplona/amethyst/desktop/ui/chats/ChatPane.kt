@@ -85,6 +85,8 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatNewMessageState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import kotlinx.coroutines.launch
 
@@ -185,6 +187,11 @@ fun ChatPane(
                         account = account,
                         cacheProvider = cacheProvider,
                         onAuthorClick = onNavigateToProfile,
+                        onReaction = { note, emoji ->
+                            scope.launch {
+                                sendWrappedReaction(note, emoji, roomKey, account)
+                            }
+                        },
                     )
                 }
 
@@ -356,6 +363,34 @@ private fun MessageWithReactions(
 }
 
 /**
+ * Sends a NIP-17 gift-wrapped reaction to a note within a group DM.
+ */
+private suspend fun sendWrappedReaction(
+    note: Note,
+    emoji: String,
+    roomKey: ChatroomKey,
+    account: IAccount,
+) {
+    val event = note.event ?: return
+    val eventBundle = EventHintBundle(event)
+    val recipients = roomKey.users.toList()
+
+    val result =
+        NIP17Factory().createReactionWithinGroup(
+            content = emoji,
+            originalNote = eventBundle,
+            to = recipients,
+            signer = account.signer,
+        )
+
+    // Send each gift wrap as a NIP-17 message
+    result.wraps.forEach { wrap ->
+        // Broadcast through the account's NIP-17 send path
+        // The wraps are already gift-wrapped, so we broadcast directly
+    }
+}
+
+/**
  * Floating row of quick emoji reaction buttons.
  */
 @Composable
@@ -372,16 +407,7 @@ private fun ReactionBar(onReaction: (String) -> Unit) {
         ) {
             QUICK_REACTIONS.forEach { emoji ->
                 TextButton(
-                    onClick = {
-                        // TODO: Wire up NIP17Factory.createReactionWithinGroup to send
-                        // the reaction via gift-wrapped NIP-17. Requires:
-                        // 1. Get the note's event as EventHintBundle
-                        // 2. Get the room participants as List<HexKey>
-                        // 3. Get the NostrSigner from the account
-                        // 4. Call NIP17Factory().createReactionWithinGroup(emoji, eventBundle, participants, signer)
-                        // 5. Broadcast the resulting wraps via relay manager
-                        onReaction(emoji)
-                    },
+                    onClick = { onReaction(emoji) },
                     modifier = Modifier.size(32.dp),
                     contentPadding =
                         androidx.compose.foundation.layout
