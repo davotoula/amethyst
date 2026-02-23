@@ -57,7 +57,9 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.ui.chat.DmBroadcastStatus
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatNewMessageState
 import com.vitorpamplona.amethyst.commons.viewmodels.ChatroomFeedViewModel
+import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
+import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
 
@@ -75,12 +77,14 @@ private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
 fun DesktopMessagesScreen(
     account: IAccount,
     cacheProvider: ICacheProvider,
+    relayManager: DesktopRelayConnectionManager,
+    localCache: DesktopLocalCache,
     onNavigateToProfile: (String) -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     val listState =
         remember(account) {
-            ChatroomListState(account, cacheProvider, scope)
+            ChatroomListState(account, cacheProvider, relayManager, localCache, scope)
         }
     val selectedRoom by listState.selectedRoom.collectAsState()
     val listFocusRequester = remember { FocusRequester() }
@@ -168,6 +172,8 @@ fun DesktopMessagesScreen(
     if (showNewDmDialog) {
         NewDmDialog(
             cacheProvider = cacheProvider,
+            relayManager = relayManager,
+            localCache = localCache,
             onUserSelected = { roomKey ->
                 listState.selectRoom(roomKey)
                 showNewDmDialog = false
