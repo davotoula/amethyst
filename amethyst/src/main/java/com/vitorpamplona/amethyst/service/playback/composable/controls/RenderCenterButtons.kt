@@ -18,18 +18,35 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.playback.pip
+package com.vitorpamplona.amethyst.service.playback.composable.controls
 
-import android.app.Activity
-import android.graphics.Rect
+import androidx.annotation.OptIn
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.ui.Modifier
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
+import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
+import kotlinx.coroutines.delay
 
-fun Activity.enterPipMode(
-    ratio: Float?,
-    bounds: Rect?,
+@OptIn(UnstableApi::class)
+@Composable
+fun RenderCenterButtons(
+    controllerState: MediaControllerState,
+    controllerVisible: MutableState<Boolean>,
+    modifier: Modifier,
 ) {
-    if (!isInPictureInPictureMode) {
-        enterPictureInPictureMode(makePipParams(ratio, bounds))
-    } else {
-        setPictureInPictureParams(makePipParams(ratio, bounds))
+    val state = rememberPlayPauseButtonState(controllerState.controller)
+
+    AnimatedPlayPauseButton(controllerVisible, modifier, !state.showPlay) {
+        state.onClick()
+    }
+
+    if (!state.showPlay) {
+        LaunchedEffect(state.showPlay) {
+            delay(2000)
+            controllerVisible.value = false
+        }
     }
 }

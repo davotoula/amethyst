@@ -20,10 +20,6 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
-import android.Manifest
-import android.content.Context
-import android.os.Build
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -32,38 +28,31 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ZoomOutMap
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import kotlinx.coroutines.launch
 
 @Preview
 @Composable
-fun AnimatedSaveButtonPreview() {
+fun FullScreenButtonPreview() {
     ThemeComparisonColumn {
         Box(Modifier.background(BitcoinOrange)) {
-            AnimatedSaveButton(
+            FullScreenButton(
                 controllerVisible = remember { mutableStateOf(true) },
                 modifier = Modifier,
             ) {}
@@ -72,10 +61,10 @@ fun AnimatedSaveButtonPreview() {
 }
 
 @Composable
-fun AnimatedSaveButton(
-    controllerVisible: State<Boolean>,
+fun FullScreenButton(
+    controllerVisible: MutableState<Boolean>,
     modifier: Modifier = Modifier,
-    onSaveClick: (localContext: Context) -> Unit,
+    onClick: () -> Unit,
 ) {
     AnimatedVisibility(
         visible = controllerVisible.value,
@@ -83,57 +72,26 @@ fun AnimatedSaveButton(
         enter = remember { fadeIn() },
         exit = remember { fadeOut() },
     ) {
-        SaveMediaButton(onSaveClick)
-    }
-}
-
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-fun SaveMediaButton(onSaveClick: (localContext: Context) -> Unit) {
-    Box(modifier = PinBottomIconSize) {
-        Box(
-            Modifier
-                .clip(CircleShape)
-                .fillMaxSize(0.7f)
-                .align(Alignment.Center)
-                .background(MaterialTheme.colorScheme.background),
-        )
-
-        val localContext = LocalContext.current
-
-        val writeStoragePermissionState =
-            rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
-                if (isGranted) {
-                    onSaveClick(localContext)
-                }
-            }
-        val scope = rememberCoroutineScope()
-        IconButton(
-            onClick = {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            localContext,
-                            stringRes(localContext, R.string.video_download_has_started_toast),
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                }
-                if (
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
-                    writeStoragePermissionState.status.isGranted
-                ) {
-                    onSaveClick(localContext)
-                } else {
-                    writeStoragePermissionState.launchPermissionRequest()
-                }
-            },
-            modifier = Size50Modifier,
-        ) {
-            Icon(
-                imageVector = Icons.Default.Download,
-                modifier = Size20Modifier,
-                contentDescription = stringRes(R.string.save_to_gallery),
+        Box(modifier = PinBottomIconSize) {
+            Box(
+                Modifier
+                    .clip(CircleShape)
+                    .fillMaxSize(0.7f)
+                    .align(Alignment.Center)
+                    .background(MaterialTheme.colorScheme.background),
             )
+
+            IconButton(
+                onClick = onClick,
+                modifier = Size50Modifier,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ZoomOutMap,
+                    contentDescription = stringRes(id = R.string.enter_picture_in_picture),
+                    modifier = modifier,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
+            }
         }
     }
 }

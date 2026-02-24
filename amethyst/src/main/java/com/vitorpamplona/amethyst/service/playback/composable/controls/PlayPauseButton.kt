@@ -20,19 +20,17 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
-import android.Manifest
-import android.content.Context
-import android.os.Build
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,42 +38,52 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
-import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
-import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
+import com.vitorpamplona.amethyst.ui.theme.PlayIconSize
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import kotlinx.coroutines.launch
 
 @Preview
 @Composable
-fun AnimatedSaveButtonPreview() {
+fun AnimatedPlayButtonPreview() {
     ThemeComparisonColumn {
         Box(Modifier.background(BitcoinOrange)) {
-            AnimatedSaveButton(
+            AnimatedPlayPauseButton(
                 controllerVisible = remember { mutableStateOf(true) },
+                isPlaying = true,
                 modifier = Modifier,
-            ) {}
+            ) { }
+        }
+    }
+}
+
+@Preview
+@Composable
+fun AnimatedPauseButtonPreview() {
+    ThemeComparisonColumn {
+        Box(Modifier.background(BitcoinOrange)) {
+            AnimatedPlayPauseButton(
+                controllerVisible = remember { mutableStateOf(true) },
+                isPlaying = false,
+                modifier = Modifier,
+            ) { }
         }
     }
 }
 
 @Composable
-fun AnimatedSaveButton(
+fun AnimatedPlayPauseButton(
     controllerVisible: State<Boolean>,
     modifier: Modifier = Modifier,
-    onSaveClick: (localContext: Context) -> Unit,
+    isPlaying: Boolean,
+    onClick: () -> Unit,
 ) {
     AnimatedVisibility(
         visible = controllerVisible.value,
@@ -83,57 +91,40 @@ fun AnimatedSaveButton(
         enter = remember { fadeIn() },
         exit = remember { fadeOut() },
     ) {
-        SaveMediaButton(onSaveClick)
+        PlayPauseButton(isPlaying, onClick)
     }
 }
 
-@OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun SaveMediaButton(onSaveClick: (localContext: Context) -> Unit) {
-    Box(modifier = PinBottomIconSize) {
+fun PlayPauseButton(
+    isPlaying: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(modifier = PlayIconSize, contentAlignment = Alignment.Center) {
         Box(
             Modifier
                 .clip(CircleShape)
-                .fillMaxSize(0.7f)
-                .align(Alignment.Center)
+                .fillMaxSize(0.6f)
                 .background(MaterialTheme.colorScheme.background),
         )
 
-        val localContext = LocalContext.current
-
-        val writeStoragePermissionState =
-            rememberPermissionState(Manifest.permission.WRITE_EXTERNAL_STORAGE) { isGranted ->
-                if (isGranted) {
-                    onSaveClick(localContext)
-                }
-            }
-        val scope = rememberCoroutineScope()
         IconButton(
-            onClick = {
-                scope.launch {
-                    Toast
-                        .makeText(
-                            localContext,
-                            stringRes(localContext, R.string.video_download_has_started_toast),
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                }
-                if (
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
-                    writeStoragePermissionState.status.isGranted
-                ) {
-                    onSaveClick(localContext)
-                } else {
-                    writeStoragePermissionState.launchPermissionRequest()
-                }
-            },
-            modifier = Size50Modifier,
+            onClick = onClick,
+            modifier = Modifier.size(80.dp),
         ) {
-            Icon(
-                imageVector = Icons.Default.Download,
-                modifier = Size20Modifier,
-                contentDescription = stringRes(R.string.save_to_gallery),
-            )
+            if (!isPlaying) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    modifier = Size50Modifier,
+                    contentDescription = stringRes(R.string.play),
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Pause,
+                    modifier = Size50Modifier,
+                    contentDescription = stringRes(R.string.play),
+                )
+            }
         }
     }
 }
