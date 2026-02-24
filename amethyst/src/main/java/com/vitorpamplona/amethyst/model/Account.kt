@@ -229,7 +229,7 @@ import kotlin.coroutines.cancellation.CancellationException
 @Stable
 class Account(
     val settings: AccountSettings = AccountSettings(KeyPair()),
-    val signer: NostrSigner,
+    override val signer: NostrSigner,
     val geolocationFlow: StateFlow<LocationState.LocationResult>,
     val nwcFilterAssembler: NWCPaymentFilterAssembler,
     val otsResolverBuilder: OtsResolverBuilder,
@@ -347,7 +347,7 @@ class Account(
     override val privateZapsDecryptionCache = PrivateZapCache(signer)
     val draftsDecryptionCache = DraftEventCache(signer)
 
-    val chatroomList = cache.getOrCreateChatroomList(signer.pubKey)
+    override val chatroomList = cache.getOrCreateChatroomList(signer.pubKey)
 
     val newNotesPreProcessor = EventProcessor(this, cache)
 
@@ -1567,7 +1567,7 @@ class Account(
         broadcast.forEach { client.send(it, relayList) }
     }
 
-    suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<PrivateDmEvent>) {
+    override suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<PrivateDmEvent>) {
         if (!isWriteable()) return
 
         val newEvent = signer.sign(eventTemplate)
@@ -1585,9 +1585,16 @@ class Account(
         broadcastPrivately(wraps)
     }
 
-    suspend fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>) {
+    override suspend fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>) {
         val events = NIP17Factory().createMessageNIP17(template, signer)
         broadcastPrivately(events)
+    }
+
+    override suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>) {
+        wraps.forEach { wrap ->
+            val relayList = computeRelayListToBroadcast(wrap)
+            client.send(wrap, relayList)
+        }
     }
 
     suspend fun broadcastPrivately(signedEvents: NIP17Factory.Result) {
@@ -1866,7 +1873,7 @@ class Account(
 
     fun isKnown(user: HexKey): Boolean = user in allFollows.flow.value.authors
 
-    fun isAcceptable(note: Note): Boolean {
+    override fun isAcceptable(note: Note): Boolean {
         return note.author?.let { isAcceptable(it) } ?: true &&
             // if user hasn't hided this author
             isAcceptableDirect(note) &&

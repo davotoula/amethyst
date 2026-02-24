@@ -486,6 +486,77 @@ object FilterBuilders {
         )
 
     /**
+     * Creates a filter for NIP-04 DMs (kind 4) sent to a user.
+     *
+     * @param pubKeyHex Recipient public key (hex-encoded, 64 chars)
+     * @param limit Maximum number of events to request
+     * @param since Timestamp for events with publication time >= this value
+     * @return Filter for DMs addressed to the specified user
+     */
+    fun nip04DmsToUser(
+        pubKeyHex: String,
+        limit: Int? = null,
+        since: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(4), // PrivateDmEvent.KIND
+            tags = mapOf("p" to listOf(pubKeyHex)),
+            limit = limit,
+            since = since,
+        )
+
+    /**
+     * Creates a filter for NIP-04 DMs (kind 4) sent from a user.
+     *
+     * @param pubKeyHex Author public key (hex-encoded, 64 chars)
+     * @param limit Maximum number of events to request
+     * @param since Timestamp for events with publication time >= this value
+     * @return Filter for DMs authored by the specified user
+     */
+    fun nip04DmsFromUser(
+        pubKeyHex: String,
+        limit: Int? = null,
+        since: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(4), // PrivateDmEvent.KIND
+            authors = listOf(pubKeyHex),
+            limit = limit,
+            since = since,
+        )
+
+    /**
+     * Creates a filter for NIP-59 gift-wrapped events (kind 1059) to a user.
+     * Gift wraps contain encrypted NIP-17 DMs.
+     *
+     * @param pubKeyHex Recipient public key (hex-encoded, 64 chars)
+     * @param since Timestamp (adjusted -2 days due to randomized created_at)
+     * @return Filter for gift wraps addressed to the specified user
+     */
+    fun giftWrapsToUser(
+        pubKeyHex: String,
+        since: Long? = null,
+    ): Filter =
+        Filter(
+            kinds = listOf(1059), // GiftWrapEvent.KIND
+            tags = mapOf("p" to listOf(pubKeyHex)),
+            since = since,
+        )
+
+    /**
+     * Creates a filter for DM relay list events (kind 10050, NIP-17).
+     *
+     * @param pubKeyHex Author public key (hex-encoded, 64 chars)
+     * @return Filter for DM relay list (limit=1 since only latest is needed)
+     */
+    fun dmRelayList(pubKeyHex: String): Filter =
+        Filter(
+            kinds = listOf(10050), // ChatMessageRelayListEvent.KIND
+            authors = listOf(pubKeyHex),
+            limit = 1,
+        )
+
+    /**
      * Creates a filter for long-form content (kind 30023, NIP-23).
      *
      * @param limit Maximum number of events to request

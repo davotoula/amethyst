@@ -18,24 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.vitorpamplona.amethyst.commons.model.Channel
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal.ListChangeFeedViewModel
+import com.vitorpamplona.amethyst.commons.model.Note
 
-class ChannelFeedViewModel(
-    val channel: Channel,
-    val account: Account,
-) : ListChangeFeedViewModel(ChannelFeedFilter(channel, account), LocalCache) {
-    class Factory(
-        val channel: Channel,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = ChannelFeedViewModel(channel, account) as T
-    }
-}
+val DefaultFeedOrder: Comparator<Note> =
+    compareByDescending<Note> { it.createdAt() }.thenBy { it.idHex }

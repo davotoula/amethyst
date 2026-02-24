@@ -79,10 +79,11 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.vitorpamplona.amethyst.commons.ui.screens.MessagesPlaceholder
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.model.DesktopDmRelayState
+import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
 import com.vitorpamplona.amethyst.desktop.chess.ChessScreen
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
@@ -96,12 +97,15 @@ import com.vitorpamplona.amethyst.desktop.ui.SearchScreen
 import com.vitorpamplona.amethyst.desktop.ui.ThreadScreen
 import com.vitorpamplona.amethyst.desktop.ui.UserProfileScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
+import com.vitorpamplona.amethyst.desktop.ui.chats.DesktopMessagesScreen
+import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private val isMacOS = System.getProperty("os.name").lowercase().contains("mac")
@@ -354,6 +358,97 @@ fun MainContent(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // DM infrastructure — hoisted here so it survives screen navigation
+    val dmSendTracker =
+        remember(relayManager) {
+            DmSendTracker(relayManager.client)
+        }
+    val iAccount =
+        remember(account, localCache, relayManager, dmSendTracker) {
+            DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope)
+        }
+
+    // Subscribe to incoming DMs and process into chatroomList
+    LaunchedEffect(account) {
+        relayManager.connectedRelays.first { it.isNotEmpty() }
+
+        val dmRelayState =
+            DesktopDmRelayState(
+                dmRelayList = kotlinx.coroutines.flow.MutableStateFlow(emptySet()),
+                connectedRelays = relayManager.connectedRelays,
+                scope = scope,
+            )
+        subscriptionsCoordinator.subscribeToDms(
+            userPubKeyHex = account.pubKeyHex,
+            dmRelayState = dmRelayState,
+            onDmEvent = { event, relay ->
+                // Store raw event in cache
+                val note = localCache.getOrCreateNote(event.id)
+                val author = localCache.getOrCreateUser(event.pubKey)
+                if (note.event == null) {
+                    note.loadEvent(event, author, emptyList())
+                    note.addRelay(relay)
+                }
+
+                // Process into chatroomList based on event type
+                when (event) {
+                    is com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent -> {
+                        iAccount.chatroomList.addMessage(
+                            event.chatroomKey(iAccount.pubKey),
+                            note,
+                        )
+                    }
+
+                    is com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent -> {
+                        // NIP-17: unwrap gift wrap → seal → inner event
+                        scope.launch {
+                            val seal =
+                                event.unwrapOrNull(iAccount.signer)
+                                    as? com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
+                                    ?: return@launch
+                            val innerEvent = seal.unsealOrNull(iAccount.signer) ?: return@launch
+                            when (innerEvent) {
+                                is com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent -> {
+                                    val innerNote = localCache.getOrCreateNote(innerEvent.id)
+                                    val innerAuthor = localCache.getOrCreateUser(innerEvent.pubKey)
+                                    if (innerNote.event == null) {
+                                        innerNote.loadEvent(innerEvent, innerAuthor, emptyList())
+                                    }
+                                    iAccount.chatroomList.addMessage(
+                                        innerEvent.chatroomKey(iAccount.pubKey),
+                                        innerNote,
+                                    )
+                                }
+
+                                is com.vitorpamplona.quartz.nip25Reactions.ReactionEvent -> {
+                                    val reactionNote = localCache.getOrCreateNote(innerEvent.id)
+                                    val reactionAuthor = localCache.getOrCreateUser(innerEvent.pubKey)
+                                    if (reactionNote.event == null) {
+                                        reactionNote.loadEvent(innerEvent, reactionAuthor, emptyList())
+                                    }
+                                    // Attach reaction to the target message note
+                                    innerEvent.originalPost().forEach { targetId ->
+                                        val targetNote = localCache.getNoteIfExists(targetId)
+                                        targetNote?.addReaction(reactionNote)
+                                    }
+                                }
+
+                                else -> {
+                                    println("Unhandled NIP-17 inner event: ${innerEvent.kind}")
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        )
+    }
+
+    // Clean up DM subscriptions when this composable leaves (logout)
+    DisposableEffect(Unit) {
+        onDispose { subscriptionsCoordinator.unsubscribeFromDms() }
+    }
+
     val onZapFeedback: (ZapFeedback) -> Unit = { feedback ->
         scope.launch {
             val message =
@@ -518,7 +613,15 @@ fun MainContent(
                     }
 
                     DesktopScreen.Messages -> {
-                        MessagesPlaceholder()
+                        DesktopMessagesScreen(
+                            account = iAccount,
+                            cacheProvider = localCache,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            onNavigateToProfile = { pubKeyHex ->
+                                onScreenChange(DesktopScreen.UserProfile(pubKeyHex))
+                            },
+                        )
                     }
 
                     DesktopScreen.Notifications -> {

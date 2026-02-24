@@ -18,24 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.dal
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.vitorpamplona.amethyst.commons.model.Channel
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal.ListChangeFeedViewModel
+import com.vitorpamplona.amethyst.commons.model.IAccount
+import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 
-class ChannelFeedViewModel(
-    val channel: Channel,
-    val account: Account,
-) : ListChangeFeedViewModel(ChannelFeedFilter(channel, account), LocalCache) {
-    class Factory(
-        val channel: Channel,
-        val account: Account,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = ChannelFeedViewModel(channel, account) as T
+class ChatroomFeedFilter(
+    val withUser: ChatroomKey,
+    val account: IAccount,
+) : AdditiveFeedFilter<Note>(),
+    ChangesFlowFilter<Note> {
+    fun chatroom() = account.chatroomList.getOrCreatePrivateChatroom(withUser)
+
+    override fun changesFlow() = chatroom().changesFlow()
+
+    // returns the last Note of each user.
+    override fun feedKey(): String = withUser.hashCode().toString()
+
+    override fun feed(): List<Note> = chatroom().messages.filter { account.isAcceptable(it) }.sortedWith(DefaultFeedOrder)
+
+    override fun applyFilter(newItems: Set<Note>): Set<Note> {
+        val chatroom = chatroom()
+        return newItems.filter { it in chatroom.messages && account.isAcceptable(it) }.toSet()
     }
+
+    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 }
