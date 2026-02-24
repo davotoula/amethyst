@@ -81,7 +81,7 @@ val DefaultNIP65List =
 
 val DefaultDMRelayList = listOf(Constants.auth, Constants.oxchat, Constants.nos)
 
-val DefaultSearchRelayList = setOf(Constants.wine, Constants.where, Constants.nostoday, Constants.antiprimal)
+val DefaultSearchRelayList = setOf(Constants.wine, Constants.where, Constants.nostoday, Constants.antiprimal, Constants.ditto)
 
 val DefaultIndexerRelayList = setOf(Constants.purplepages, Constants.coracle, Constants.userkinds, Constants.yabu, Constants.nostr1)
 
@@ -110,6 +110,9 @@ val KIND3_FOLLOWS = " Main User Follows "
 
 // This has spaces to avoid mixing with a potential NIP-51 list with the same name.
 val AROUND_ME = " Around Me "
+
+// This has spaces to avoid mixing with a potential NIP-51 list with the same name.
+val CHESS = " Chess "
 
 @Stable
 class AccountSettings(

@@ -38,26 +38,43 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.PinBottomIconSize
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.coroutines.launch
+
+@Preview
+@Composable
+fun AnimatedSaveButtonPreview() {
+    ThemeComparisonColumn {
+        Box(Modifier.background(BitcoinOrange)) {
+            AnimatedSaveButton(
+                controllerVisible = remember { mutableStateOf(true) },
+                modifier = Modifier,
+            ) {}
+        }
+    }
+}
 
 @Composable
 fun AnimatedSaveButton(
     controllerVisible: State<Boolean>,
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     onSaveClick: (localContext: Context) -> Unit,
 ) {
     AnimatedVisibility(
@@ -77,7 +94,7 @@ fun SaveMediaButton(onSaveClick: (localContext: Context) -> Unit) {
         Box(
             Modifier
                 .clip(CircleShape)
-                .fillMaxSize(0.6f)
+                .fillMaxSize(0.7f)
                 .align(Alignment.Center)
                 .background(MaterialTheme.colorScheme.background),
         )

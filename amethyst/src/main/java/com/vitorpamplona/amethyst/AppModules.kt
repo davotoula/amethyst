@@ -73,6 +73,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -293,6 +294,13 @@ class AppModules(
 
         // registers to receive events
         pokeyReceiver.register(appContext)
+
+        // initializes diskcache on an IO thread.
+        applicationIOScope.launch {
+            // Sets Coil - Tor - OkHttp link
+            delay(3000)
+            videoCache
+        }
     }
 
     fun terminate(appContext: Context) {

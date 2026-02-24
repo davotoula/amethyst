@@ -460,6 +460,7 @@
     <string name="poll_heading_required">Required fields:</string>
     <string name="poll_zap_recipients">Zap recipients</string>
     <string name="poll_primary_description">Primary poll description…</string>
+    <string name="poll_option">Option</string>
     <string name="poll_option_index">Option %s</string>
     <string name="poll_option_description">Poll option description</string>
     <string name="poll_heading_optional">Optional fields:</string>
@@ -467,6 +468,8 @@
     <string name="poll_zap_value_max">Zap maximum</string>
     <string name="poll_consensus_threshold">Consensus</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_date_time">Poll Closing Date &amp; Time</string>
+    <string name="poll_closing_in">Poll closes in %1$s</string>
     <string name="poll_closing_time">Close after</string>
     <string name="poll_closing_time_days">days</string>
     <string name="poll_unable_to_vote">Unable to vote</string>
@@ -532,6 +535,7 @@
     <string name="no_nip96_server_message">You have no NIP-96 servers set. You can use Amethyst\'s list, or add one below ↓</string>
     <string name="no_blossom_server_message">You have no Blossom servers set. You can use Amethyst\'s list, or add one below ↓</string>
 
+    <string name="recommended_media_servers">Recommended Media Servers</string>
     <string name="built_in_media_servers_title">Built-in Media Servers</string>
     <string name="built_in_servers_description">Amethyst\'s default list. You can add them individually or add the list.</string>
     <string name="use_default_servers">Use Default List</string>
@@ -570,6 +574,7 @@
     <string name="follow_list_kind3follows_proxy">Follows via Proxy</string>
     <string name="follow_list_aroundme">Around Me</string>
     <string name="follow_list_global">Global</string>
+    <string name="follow_list_chess">Chess</string>
     <string name="follow_list_mute_list">Mute List</string>
 
     <string name="follow_sets">Follow Lists</string>
@@ -676,8 +681,8 @@
     <string name="tor_use_nip05_verification">Nostr Address Verification</string>
     <string name="tor_use_nip05_verification_explainer">Force Tor when verifying NIP-05 addresses</string>
 
-    <string name="tor_use_nip96_uploads">Media Uploads</string>
-    <string name="tor_use_nip96_uploads_explainer">Force Tor when uploading content</string>
+    <string name="tor_use_media_uploads">Media Uploads</string>
+    <string name="tor_use_media_uploads_explainer">Force Tor when uploading content</string>
 
     <string name="tor_internal">Internal</string>
     <string name="tor_external">Orbot</string>
@@ -1190,6 +1195,7 @@
     <string name="route_notifications">Notifications</string>
     <string name="route_global">Global</string>
     <string name="route_video">Shorts</string>
+    <string name="route_chess">Chess</string>
     <string name="route_security_filters">Security Filters</string>
 
     <string name="new_post">New Post</string>
@@ -1504,4 +1510,8 @@
     <string name="reaction">Reaction</string>
     <string name="voice_post">Voice Post</string>
     <string name="voice_reply">Voice Reply</string>
+    <string name="closing_time">Closing Time</string>
+    <string name="confirm">Confirm</string>
+    <string name="next">Next</string>
+    <string name="add_poll_option_button">Add poll option button</string>
 </resources>

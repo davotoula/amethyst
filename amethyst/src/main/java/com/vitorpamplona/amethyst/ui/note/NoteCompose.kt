@@ -103,6 +103,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderBadgeAward
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderChatMessageEncryptedFile
+import com.vitorpamplona.amethyst.ui.note.types.RenderChessGame
 import com.vitorpamplona.amethyst.ui.note.types.RenderClassifieds
 import com.vitorpamplona.amethyst.ui.note.types.RenderCommunity
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
@@ -114,6 +115,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderHighlight
 import com.vitorpamplona.amethyst.ui.note.types.RenderInteractiveStory
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityChatMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderLiveActivityEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessChallenge
+import com.vitorpamplona.amethyst.ui.note.types.RenderLiveChessGameEnd
 import com.vitorpamplona.amethyst.ui.note.types.RenderLongFormContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90ContentDiscoveryResponse
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90Status
@@ -131,6 +134,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrentComment
 import com.vitorpamplona.amethyst.ui.note.types.RenderVoiceTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
+import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
@@ -209,6 +213,9 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip58Badges.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip64Chess.ChessGameEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoHorizontalEvent
@@ -220,6 +227,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90StatusEvent
@@ -911,6 +919,33 @@ private fun RenderNoteRow(
             )
         }
 
+        is ChessGameEvent -> {
+            RenderChessGame(
+                baseNote,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is LiveChessGameChallengeEvent -> {
+            RenderLiveChessChallenge(
+                baseNote,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is LiveChessGameEndEvent -> {
+            RenderLiveChessGameEnd(
+                baseNote,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
         is ClassifiedsEvent -> {
             RenderClassifieds(
                 noteEvent,
@@ -967,12 +1002,24 @@ private fun RenderNoteRow(
         }
 
         is PollNoteEvent -> {
-            RenderPoll(
+            RenderZapPoll(
                 baseNote,
                 makeItShort,
                 canPreview,
                 quotesLeft,
                 unPackReply,
+                backgroundColor,
+                accountViewModel,
+                nav,
+            )
+        }
+
+        is PollEvent -> {
+            RenderPoll(
+                baseNote,
+                makeItShort,
+                canPreview,
+                quotesLeft,
                 backgroundColor,
                 accountViewModel,
                 nav,

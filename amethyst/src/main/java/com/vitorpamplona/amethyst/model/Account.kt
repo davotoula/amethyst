@@ -82,14 +82,12 @@ import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState
-import com.vitorpamplona.amethyst.model.nip96FileStorage.FileStorageServerListState
 import com.vitorpamplona.amethyst.model.nipA3PaymentTargets.NipA3PaymentTargetsState
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineRelayListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineWithIndexRelayListsState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowPlusMineWithSearchRelayListsState
-import com.vitorpamplona.amethyst.model.serverList.MergedServerListState
 import com.vitorpamplona.amethyst.model.serverList.TrustedRelayListsState
 import com.vitorpamplona.amethyst.model.topNavFeeds.FeedDecryptionCaches
 import com.vitorpamplona.amethyst.model.topNavFeeds.FeedTopNavFilterState
@@ -192,6 +190,8 @@ import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
@@ -315,8 +315,6 @@ class Account(
     val appSpecific = AppSpecificState(signer, cache, scope, settings)
 
     val blossomServers = BlossomServerListState(signer, cache, scope, settings)
-    val fileStorageServers = FileStorageServerListState(signer, cache, scope, settings)
-    val serverLists = MergedServerListState(fileStorageServers, blossomServers, scope)
 
     // Relay settings
     val homeRelays = AccountHomeRelayState(nip65RelayList, privateStorageRelayList, localRelayList, scope)
@@ -527,13 +525,12 @@ class Account(
         if (!signer.isWriteable()) return null
         if (note.hasReacted(userProfile(), reaction)) return null
 
-        val noteEvent = note.event ?: return null
+        val eventHint = note.toEventHint<Event>() ?: return null
 
         // For NIP-17 private groups, we don't support tracked mode (too complex)
-        if (noteEvent is NIP17Group) return null
+        if (eventHint.event is NIP17Group) return null
 
-        val relayHint = note.relays.firstOrNull()?.url
-        val event = ReactionAction.reactTo(noteEvent, reaction, signer, relayHint)
+        val event = ReactionAction.reactTo(eventHint, reaction, signer)
         val relays = computeRelayListToBroadcast(event)
 
         return event to relays
@@ -882,6 +879,10 @@ class Account(
             }
         }
 
+        if (event is PollEvent) {
+            relayList.addAll(event.relays())
+        }
+
         relayList.addAll(computeRelaysForChannels(event))
 
         return relayList
@@ -989,6 +990,23 @@ class Account(
     fun sendLiterallyEverywhere(event: Event) {
         client.send(event, followPlusAllMineWithIndex.flow.value + client.availableRelaysFlow().value)
         cache.justConsumeMyOwnEvent(event)
+    }
+
+    suspend fun pollRespond(
+        event: PollEvent,
+        responses: Set<String>,
+    ) {
+        val poll = cache.getOrCreateNote(event.id).toEventHint<PollEvent>()
+
+        if (poll != null) {
+            val template = PollResponseEvent.build(poll, responses)
+
+            val signedEvent = signer.sign(template)
+
+            cache.justConsumeMyOwnEvent(signedEvent)
+
+            client.send(signedEvent, computeRelayListToBroadcast(signedEvent))
+        }
     }
 
     suspend fun createNip95(
@@ -1337,19 +1355,15 @@ class Account(
     }
 
     suspend fun createInteractiveStoryReadingState(
-        root: InteractiveStoryBaseEvent,
-        rootRelay: NormalizedRelayUrl?,
-        readingScene: InteractiveStoryBaseEvent,
-        readingSceneRelay: NormalizedRelayUrl?,
+        root: EventHintBundle<InteractiveStoryBaseEvent>,
+        readingScene: EventHintBundle<InteractiveStoryBaseEvent>,
     ) {
         if (!isWriteable()) return
 
         val template =
             InteractiveStoryReadingStateEvent.build(
                 root = root,
-                rootRelay = rootRelay,
                 currentScene = readingScene,
-                currentSceneRelay = readingSceneRelay,
             )
 
         val event = signer.sign(template)
@@ -1368,8 +1382,7 @@ class Account(
 
     suspend fun updateInteractiveStoryReadingState(
         readingState: InteractiveStoryReadingStateEvent,
-        readingScene: InteractiveStoryBaseEvent,
-        readingSceneRelay: NormalizedRelayUrl?,
+        readingScene: EventHintBundle<InteractiveStoryBaseEvent>,
     ) {
         if (!isWriteable()) return
 
@@ -1377,7 +1390,6 @@ class Account(
             InteractiveStoryReadingStateEvent.update(
                 base = readingState,
                 currentScene = readingScene,
-                currentSceneRelay = readingSceneRelay,
             )
 
         val event = signer.sign(template)
@@ -1906,8 +1918,6 @@ class Account(
     suspend fun saveBlockedRelayList(blockedRelays: List<NormalizedRelayUrl>) = sendMyPublicAndPrivateOutbox(blockedRelayList.saveRelayList(blockedRelays))
 
     suspend fun sendNip65RelayList(relays: List<AdvertisedRelayInfo>) = sendLiterallyEverywhere(nip65RelayList.saveRelayList(relays))
-
-    suspend fun sendFileServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(fileStorageServers.saveFileServersList(servers))
 
     suspend fun sendBlossomServersList(servers: List<String>) = sendMyPublicAndPrivateOutbox(blossomServers.saveBlossomServersList(servers))
 

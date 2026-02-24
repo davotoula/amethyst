@@ -20,27 +20,42 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable
 
-import android.content.Context
-import android.view.View
-import android.widget.FrameLayout
 import androidx.annotation.OptIn
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
-import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderControlButtons
+import androidx.media3.ui.compose.ContentFrame
+import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
+import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderAnimatedBottomInfo
+import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCenterButtons
+import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderTopButtons
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+
+private fun getVideoSizeDp(player: Player): Size? {
+    var videoSize = Size(player.videoSize.width.toFloat(), player.videoSize.height.toFloat())
+
+    if (videoSize.width == 0f || videoSize.height == 0f) return null
+
+    val par = player.videoSize.pixelWidthHeightRatio
+    if (par < 1.0) {
+        videoSize = videoSize.copy(width = videoSize.width * par)
+    } else if (par > 1.0) {
+        videoSize = videoSize.copy(height = videoSize.height / par)
+    }
+    return videoSize
+}
 
 @Composable
 @OptIn(UnstableApi::class)
@@ -52,74 +67,37 @@ fun RenderVideoPlayer(
     contentScale: ContentScale,
     borderModifier: Modifier,
     videoModifier: Modifier,
-    onControllerVisibilityChanged: ((Boolean) -> Unit)? = null,
-    onDialog: ((Boolean) -> Unit)?,
+    onDialog: (() -> Unit)? = null,
+    controllerVisible: MutableState<Boolean> = remember { mutableStateOf(false) },
     accountViewModel: AccountViewModel,
 ) {
-    val controllerVisible = remember(controllerState) { mutableStateOf(false) }
-
     Box(modifier = borderModifier) {
-        AndroidView(
-            modifier = videoModifier,
-            factory = { context: Context ->
-                PlayerView(context).apply {
-                    player = controllerState.controller
-                    // if we alrady know the size of the frame, this forces the player to stay in the size
-                    layoutParams =
-                        FrameLayout.LayoutParams(
-                            FrameLayout.LayoutParams.WRAP_CONTENT,
-                            FrameLayout.LayoutParams.WRAP_CONTENT,
-                        )
-
-                    setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
-                    setBackgroundColor(Color.Transparent.toArgb())
-                    setShutterBackgroundColor(Color.Transparent.toArgb())
-
-                    controllerAutoShow = false
-                    useController = showControls
-                    thumbData?.thumb?.let { defaultArtwork = it }
-                    hideController()
-
-                    resizeMode =
-                        when (contentScale) {
-                            ContentScale.Fit -> AspectRatioFrameLayout.RESIZE_MODE_FIT
-                            ContentScale.FillWidth -> AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
-                            ContentScale.Crop -> AspectRatioFrameLayout.RESIZE_MODE_FILL
-                            ContentScale.FillHeight -> AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT
-                            ContentScale.Inside -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                            else -> AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH
-                        }
-
-                    if (showControls) {
-                        onDialog?.let { innerOnDialog ->
-                            setFullscreenButtonClickListener {
-                                controllerState.controller?.pause()
-                                innerOnDialog(it)
-                            }
-                        }
-                        setControllerVisibilityListener(
-                            PlayerView.ControllerVisibilityListener { visible ->
-                                controllerVisible.value = visible == View.VISIBLE
-                                onControllerVisibilityChanged?.let { callback -> callback(visible == View.VISIBLE) }
-                            },
-                        )
-                    }
-                }
-            },
+        ContentFrame(
+            player = controllerState.controller,
+            modifier =
+                videoModifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null, // to prevent the ripple from the tap
+                ) { controllerVisible.value = !controllerVisible.value },
+            surfaceType = SURFACE_TYPE_TEXTURE_VIEW, // texture view is better inside lazy layouts.
+            contentScale = contentScale,
         )
 
         mediaItem.src.waveformData?.let { Waveform(it, controllerState, Modifier.align(Alignment.Center)) }
 
         if (showControls) {
-            RenderControlButtons(
-                mediaItem.src,
-                controllerState,
-                controllerVisible,
-                Modifier.align(Alignment.TopEnd),
-                accountViewModel,
+            RenderTopButtons(
+                mediaData = mediaItem.src,
+                controllerState = controllerState,
+                controllerVisible = controllerVisible,
+                onZoomClick = onDialog,
+                modifier = Modifier.align(Alignment.TopEnd),
+                accountViewModel = accountViewModel,
             )
-        } else {
-            controllerState.controller?.volume = 0f
+
+            RenderCenterButtons(controllerState, controllerVisible, Modifier.align(Alignment.Center))
+
+            RenderAnimatedBottomInfo(controllerState, controllerVisible, Modifier.align(Alignment.BottomCenter))
         }
     }
 }

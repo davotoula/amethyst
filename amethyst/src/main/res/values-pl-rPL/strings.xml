@@ -423,6 +423,7 @@
     <string name="poll_heading_required">Wymagane pola:</string>
     <string name="poll_zap_recipients">Odbiorcy zap</string>
     <string name="poll_primary_description">Podstawowy opis ankiety…</string>
+    <string name="poll_option">Opcja</string>
     <string name="poll_option_index">Opcja %s</string>
     <string name="poll_option_description">Opis opcji ankiety</string>
     <string name="poll_heading_optional">Pola opcjonalne:</string>
@@ -430,6 +431,8 @@
     <string name="poll_zap_value_max">Maksymalny Zap</string>
     <string name="poll_consensus_threshold">Konsensus</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_date_time">Data &amp; godzina zakończenia ankiety</string>
+    <string name="poll_closing_in">Ankieta zostanie zamknięta za %1$s</string>
     <string name="poll_closing_time">Zamknij po</string>
     <string name="poll_closing_time_days">dni</string>
     <string name="poll_unable_to_vote">Nie można głosować</string>
@@ -473,6 +476,7 @@
     <string name="set_preferred_media_servers">Ustaw swoje preferowane serwery przesyłania multimediów.</string>
     <string name="no_nip96_server_message">Nie masz ustawionych własnych serwerów NIP-96. Możesz użyć listy Amethysta lub dodać jeden poniżej ↓</string>
     <string name="no_blossom_server_message">Nie masz ustawionych własnych serwerów multimediów. Możesz użyć listy Amethysta lub dodać jeden poniżej ↓</string>
+    <string name="recommended_media_servers">Polecane serwery multimediów</string>
     <string name="built_in_media_servers_title">Wbudowane serwery multimediów</string>
     <string name="built_in_servers_description">Domyślna lista Amethyst-a. Możesz dodawać je pojedynczo lub dodać pełną listę.</string>
     <string name="use_default_servers">Użyj domyślnej listy</string>
@@ -504,6 +508,7 @@
     <string name="follow_list_kind3follows_proxy">Obserwuje przez proxy</string>
     <string name="follow_list_aroundme">W pobliżu</string>
     <string name="follow_list_global">Wszystkie</string>
+    <string name="follow_list_chess">Szachy</string>
     <string name="follow_list_mute_list">Zablokowane</string>
     <string name="follow_sets">Listy obserwowanych</string>
     <string name="follow_sets_explainer">Są to listy obserwowanych przeznaczone do prywatnego użytku. Możesz obserwować użytkowników dyskretnie lub otwarcie</string>
@@ -592,8 +597,8 @@
     <string name="tor_use_money_operations_explainer">Wymuś Tor przy zapsach, transferach lightning and cashu</string>
     <string name="tor_use_nip05_verification">Weryfikacja adresu Nostr</string>
     <string name="tor_use_nip05_verification_explainer">Wymuś Tor podczas weryfikacji adresów NIP-05</string>
-    <string name="tor_use_nip96_uploads">Wgrywanie mediów</string>
-    <string name="tor_use_nip96_uploads_explainer">Wymuś Tor podczas wgrywania zawartości</string>
+    <string name="tor_use_media_uploads">Wgrywanie mediów</string>
+    <string name="tor_use_media_uploads_explainer">Wymuś Tor podczas wgrywania zawartości</string>
     <string name="tor_internal">Wewnętrznie</string>
     <string name="tor_external">Orbot</string>
     <string name="tor_off">Wył.</string>
@@ -1005,6 +1010,7 @@
     <string name="route_notifications">Powiadomienia</string>
     <string name="route_global">Wszystkie</string>
     <string name="route_video">Filmiki</string>
+    <string name="route_chess">Szachy</string>
     <string name="route_security_filters">Filtry bezpieczeństwa</string>
     <string name="new_post">Nowy post</string>
     <string name="new_short">Nowe Króciaki: zdjęcia lub filmiki</string>
@@ -1239,4 +1245,35 @@
     <string name="follow_set_delete">Usuń listę</string>
     <string name="follow_pack_delete">Usuń kategorię</string>
     <string name="kinds">Typy</string>
+    <string name="retry_failed">Powtórka nieudana</string>
+    <string name="tap_to_view_details">Naciśnij, aby zobaczyć szczegóły</string>
+    <string name="event_sent">%1$s wysłano</string>
+    <string name="broadcast_results">Wyniki przekazu</string>
+    <string name="broadcasts_number">Przekazów (%1$d)</string>
+    <string name="collapse">Zwiń</string>
+    <string name="expand">Rozwiń</string>
+    <string name="retry_failed_number">Nieudanych powtórzeń (%1$d)</string>
+    <string name="more_broadcasts_number">+%1$d kolejnych przekazów</string>
+    <string name="number_in_progress">" (%1$d w toku)"</string>
+    <string name="share_of_relays">%1$d/%2$d transmiterów</string>
+    <string name="timeout">Czas się skończył</string>
+    <string name="retrying">Ponawiam próbę…</string>
+    <string name="retry">Ponów</string>
+    <string name="view">Pokaż</string>
+    <string name="dismiss">Ignoruj</string>
+    <string name="share_of">%1$d/%2$d</string>
+    <string name="broadcasting">Przekaz</string>
+    <string name="broadcasting_name">Przekaz %1$s</string>
+    <string name="broadcasting_number_events">Liczba przekazów: %1$d...</string>
+    <string name="sent_number_events">Wysłanych przekazów: %1$d</string>
+    <string name="bradcasting_result_partial">Niektóre akcje nie powiodły się</string>
+    <string name="bradcasting_result_success">Wszystkie akcje udane</string>
+    <string name="bradcasting_result_failure">Wszystkie akcje nieudane</string>
+    <string name="reaction">Reakcja</string>
+    <string name="voice_post">Wiadomość głosowa</string>
+    <string name="voice_reply">Odpowiedź głosowa</string>
+    <string name="closing_time">Czas zakończenia głosowania</string>
+    <string name="confirm">Potwierdź</string>
+    <string name="next">Dalej</string>
+    <string name="add_poll_option_button">Przycisk \"Dodaj opcję ankiety\"</string>
 </resources>
