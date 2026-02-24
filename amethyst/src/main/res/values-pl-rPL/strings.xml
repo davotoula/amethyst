@@ -423,6 +423,7 @@
     <string name="poll_heading_required">Wymagane pola:</string>
     <string name="poll_zap_recipients">Odbiorcy zap</string>
     <string name="poll_primary_description">Podstawowy opis ankiety…</string>
+    <string name="poll_option">Opcja</string>
     <string name="poll_option_index">Opcja %s</string>
     <string name="poll_option_description">Opis opcji ankiety</string>
     <string name="poll_heading_optional">Pola opcjonalne:</string>
@@ -430,6 +431,8 @@
     <string name="poll_zap_value_max">Maksymalny Zap</string>
     <string name="poll_consensus_threshold">Konsensus</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_date_time">Data &amp; godzina zakończenia ankiety</string>
+    <string name="poll_closing_in">Ankieta zostanie zamknięta za %1$s</string>
     <string name="poll_closing_time">Zamknij po</string>
     <string name="poll_closing_time_days">dni</string>
     <string name="poll_unable_to_vote">Nie można głosować</string>
@@ -473,6 +476,7 @@
     <string name="set_preferred_media_servers">Ustaw swoje preferowane serwery przesyłania multimediów.</string>
     <string name="no_nip96_server_message">Nie masz ustawionych własnych serwerów NIP-96. Możesz użyć listy Amethysta lub dodać jeden poniżej ↓</string>
     <string name="no_blossom_server_message">Nie masz ustawionych własnych serwerów multimediów. Możesz użyć listy Amethysta lub dodać jeden poniżej ↓</string>
+    <string name="recommended_media_servers">Polecane serwery multimediów</string>
     <string name="built_in_media_servers_title">Wbudowane serwery multimediów</string>
     <string name="built_in_servers_description">Domyślna lista Amethyst-a. Możesz dodawać je pojedynczo lub dodać pełną listę.</string>
     <string name="use_default_servers">Użyj domyślnej listy</string>
@@ -504,6 +508,7 @@
     <string name="follow_list_kind3follows_proxy">Obserwuje przez proxy</string>
     <string name="follow_list_aroundme">W pobliżu</string>
     <string name="follow_list_global">Wszystkie</string>
+    <string name="follow_list_chess">Szachy</string>
     <string name="follow_list_mute_list">Zablokowane</string>
     <string name="follow_sets">Listy obserwowanych</string>
     <string name="follow_sets_explainer">Są to listy obserwowanych przeznaczone do prywatnego użytku. Możesz obserwować użytkowników dyskretnie lub otwarcie</string>
@@ -1005,6 +1010,7 @@
     <string name="route_notifications">Powiadomienia</string>
     <string name="route_global">Wszystkie</string>
     <string name="route_video">Filmiki</string>
+    <string name="route_chess">Szachy</string>
     <string name="route_security_filters">Filtry bezpieczeństwa</string>
     <string name="new_post">Nowy post</string>
     <string name="new_short">Nowe Króciaki: zdjęcia lub filmiki</string>
@@ -1266,4 +1272,8 @@
     <string name="reaction">Reakcja</string>
     <string name="voice_post">Wiadomość głosowa</string>
     <string name="voice_reply">Odpowiedź głosowa</string>
+    <string name="closing_time">Czas zakończenia głosowania</string>
+    <string name="confirm">Potwierdź</string>
+    <string name="next">Dalej</string>
+    <string name="add_poll_option_button">Przycisk \"Dodaj opcję ankiety\"</string>
 </resources>

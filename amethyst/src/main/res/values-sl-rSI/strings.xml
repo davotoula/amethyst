@@ -437,6 +437,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="poll_heading_required">Zahtevana polja:</string>
     <string name="poll_zap_recipients">Prejemniki Zapov</string>
     <string name="poll_primary_description">Opis primarne ankete…</string>
+    <string name="poll_option">Izbira</string>
     <string name="poll_option_index">Izbira %s</string>
     <string name="poll_option_description">Opis izbire v anketi</string>
     <string name="poll_heading_optional">Izbirna polja:</string>
@@ -444,6 +445,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="poll_zap_value_max">Zap maksimum</string>
     <string name="poll_consensus_threshold">Soglasje</string>
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
+    <string name="poll_closing_date_time">Datum in čas konca glasovanja</string>
+    <string name="poll_closing_in">Glasovanje se zaključi  %1$s</string>
     <string name="poll_closing_time">Zapri po</string>
     <string name="poll_closing_time_days">dni</string>
     <string name="poll_unable_to_vote">Nezmožen za glasovanje</string>
@@ -487,6 +490,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="set_preferred_media_servers">Nastavi svoje prednostne medijske strežnike za nalaganje medijev.</string>
     <string name="no_nip96_server_message">Nimate nastavljenih NIP-96 strežnikov. Uporabite lahko Amethyst-ov seznam ali dodajte enega spodaj ↓</string>
     <string name="no_blossom_server_message">Nimate nastavljenih Blossom strežnikov. Uporabite lahko Amethyst-ov seznam ali dodajte enega spodaj ↓</string>
+    <string name="recommended_media_servers">Priporočljivi medijski strežniki</string>
     <string name="built_in_media_servers_title">Vgrajeni medijski strežniki</string>
     <string name="built_in_servers_description">Privzeti seznam Amethysta. Lahko jih dodate posamično ali dodate celoten seznam.</string>
     <string name="use_default_servers">Uporabi privzeti seznam</string>
@@ -518,6 +522,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="follow_list_kind3follows_proxy">Sledi preko posrednika</string>
     <string name="follow_list_aroundme">V moji okolici</string>
     <string name="follow_list_global">Globalno</string>
+    <string name="follow_list_chess">Šah</string>
     <string name="follow_list_mute_list">Spisek utišanih</string>
     <string name="follow_sets">Seznam sledenih</string>
     <string name="follow_sets_explainer">To so seznami sledenih, namenjeni za vašo lastno uporabo. Uporabnike lahko sledite javno ali zasebno</string>
@@ -1019,6 +1024,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="route_notifications">Obvestila</string>
     <string name="route_global">Globalno</string>
     <string name="route_video">Kratki mediji</string>
+    <string name="route_chess">Šah</string>
     <string name="route_security_filters">Varnostni filtri</string>
     <string name="new_post">Nova objava</string>
     <string name="new_short">Novi kratki mediji: slike ali posnetki</string>
@@ -1214,6 +1220,9 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="group_relay_explanation">Rele, na katerega so povezani vsi uporabniki tega klepeta</string>
     <string name="share_image">Deli sliko…</string>
     <string name="unable_to_share_image">Deljenje slike ni uspelo, prosimo poskusite znova…</string>
+    <string name="share_video">Deli video…</string>
+    <string name="unable_to_share_video">Videa ni bilo mogoče deliti, prosim poskusite kasneje…</string>
+    <string name="downloading_video_for_sharing">Prenašam video …</string>
     <string name="search_by_hashtag">Išči ključnik: #%1$s</string>
     <string name="dont_translate_from">Ne prevedi iz</string>
     <string name="dont_translate_from_description">Tu prikazani jeziki ne bodo prevedeni. Izberite jezik, da ga odstranite in ga znova prevedete.</string>
@@ -1251,4 +1260,35 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="follow_set_delete">Izbriši seznam</string>
     <string name="follow_pack_delete">Izbriši paket</string>
     <string name="kinds">Tipi</string>
+    <string name="retry_failed">Ponovni poskus ni uspel</string>
+    <string name="tap_to_view_details">Kliknite za ogled podrobnosti</string>
+    <string name="event_sent">%1$s poslano</string>
+    <string name="broadcast_results">Rezultat oddajanja</string>
+    <string name="broadcasts_number">Razpošlji (%1$d)</string>
+    <string name="collapse">Strni</string>
+    <string name="expand">Razširi</string>
+    <string name="retry_failed_number">Ponovni poskus ni uspel (%1$d)</string>
+    <string name="more_broadcasts_number">+%1$d več oddajanj</string>
+    <string name="number_in_progress">" (%1$d v teku)"</string>
+    <string name="share_of_relays">%1$d/%2$d releji</string>
+    <string name="timeout">Čas je potekel</string>
+    <string name="retrying">Poskušam ponovno…</string>
+    <string name="retry">Poskusi ponovno</string>
+    <string name="view">Ogled</string>
+    <string name="dismiss">Zavrni</string>
+    <string name="share_of">%1$d/%2$d</string>
+    <string name="broadcasting">Oddajanje</string>
+    <string name="broadcasting_name">Oddajam %1$s</string>
+    <string name="broadcasting_number_events">Oddajam %1$d dogodkov...</string>
+    <string name="sent_number_events">Poslano %1$d dogodkov</string>
+    <string name="bradcasting_result_partial">Nekaterim dogodkom ni uspelo</string>
+    <string name="bradcasting_result_success">Vsem dogodkom je uspelo</string>
+    <string name="bradcasting_result_failure">Vsem dogodkom ni uspelo</string>
+    <string name="reaction">Odziv</string>
+    <string name="voice_post">Glasovna objava</string>
+    <string name="voice_reply">Zvočni odgovor</string>
+    <string name="closing_time">Končni čas</string>
+    <string name="confirm">Potrdi</string>
+    <string name="next">Naprej</string>
+    <string name="add_poll_option_button">Dodaj gumb za glasovanje</string>
 </resources>
