@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PictureInPicture
 import androidx.compose.material.icons.filled.SaveAlt
@@ -64,11 +63,9 @@ fun OverflowMenuButtonPreview() {
             OverflowMenuButton(
                 showShare = true,
                 showSave = true,
-                showFullscreen = true,
                 showPip = true,
                 onShareClick = {},
                 onSaveClick = {},
-                onFullscreenClick = {},
                 onPipClick = {},
             )
         }
@@ -81,11 +78,9 @@ fun AnimatedOverflowMenuButton(
     modifier: Modifier = Modifier,
     showShare: Boolean = true,
     showSave: Boolean = true,
-    showFullscreen: Boolean = false,
     showPip: Boolean = false,
     onShareClick: () -> Unit,
     onSaveClick: () -> Unit,
-    onFullscreenClick: () -> Unit,
     onPipClick: () -> Unit,
 ) {
     AnimatedVisibility(
@@ -97,11 +92,9 @@ fun AnimatedOverflowMenuButton(
         OverflowMenuButton(
             showShare = showShare,
             showSave = showSave,
-            showFullscreen = showFullscreen,
             showPip = showPip,
             onShareClick = onShareClick,
             onSaveClick = onSaveClick,
-            onFullscreenClick = onFullscreenClick,
             onPipClick = onPipClick,
         )
     }
@@ -111,11 +104,9 @@ fun AnimatedOverflowMenuButton(
 fun OverflowMenuButton(
     showShare: Boolean,
     showSave: Boolean,
-    showFullscreen: Boolean,
     showPip: Boolean,
     onShareClick: () -> Unit,
     onSaveClick: () -> Unit,
-    onFullscreenClick: () -> Unit,
     onPipClick: () -> Unit,
 ) {
     val menuExpanded = remember { mutableStateOf(false) }
@@ -173,23 +164,6 @@ fun OverflowMenuButton(
                     leadingIcon = {
                         Icon(
                             Icons.Default.SaveAlt,
-                            contentDescription = null,
-                            tint = Color.White,
-                        )
-                    },
-                )
-            }
-
-            if (showFullscreen) {
-                DropdownMenuItem(
-                    text = { Text(stringRes(R.string.fullscreen), color = Color.White) },
-                    onClick = {
-                        menuExpanded.value = false
-                        onFullscreenClick()
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Fullscreen,
                             contentDescription = null,
                             tint = Color.White,
                         )

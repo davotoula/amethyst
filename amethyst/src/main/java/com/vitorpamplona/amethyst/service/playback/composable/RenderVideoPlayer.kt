@@ -21,8 +21,7 @@
 package com.vitorpamplona.amethyst.service.playback.composable
 
 import androidx.annotation.OptIn
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -31,16 +30,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
+import com.vitorpamplona.amethyst.service.playback.composable.controls.BottomGradientOverlay
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderAnimatedBottomInfo
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCenterButtons
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderTopButtons
+import com.vitorpamplona.amethyst.service.playback.composable.controls.TopGradientOverlay
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
+import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 private fun getVideoSizeDp(player: Player): Size? {
@@ -71,21 +76,57 @@ fun RenderVideoPlayer(
     controllerVisible: MutableState<Boolean> = remember { mutableStateOf(false) },
     accountViewModel: AccountViewModel,
 ) {
-    Box(modifier = borderModifier) {
+    val containerSize = remember { mutableStateOf(IntSize.Zero) }
+    val isLive = isLiveStreaming(mediaItem.src.videoUri)
+    val skipSeconds = if (controllerState.controller.duration in 1..30000) 5 else 10
+
+    Box(
+        modifier =
+            borderModifier
+                .onSizeChanged { containerSize.value = it }
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = { controllerVisible.value = !controllerVisible.value },
+                        onDoubleTap = { offset ->
+                            if (!isLive) {
+                                val isLeftSide = offset.x < containerSize.value.width / 2
+                                if (isLeftSide) {
+                                    val newPosition =
+                                        (controllerState.controller.currentPosition - skipSeconds * 1000)
+                                            .coerceAtLeast(0)
+                                    controllerState.controller.seekTo(newPosition)
+                                } else {
+                                    val duration = controllerState.controller.duration
+                                    val newPosition =
+                                        (controllerState.controller.currentPosition + skipSeconds * 1000)
+                                            .coerceAtMost(duration)
+                                    controllerState.controller.seekTo(newPosition)
+                                }
+                            }
+                        },
+                    )
+                },
+    ) {
         ContentFrame(
             player = controllerState.controller,
-            modifier =
-                videoModifier.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null, // to prevent the ripple from the tap
-                ) { controllerVisible.value = !controllerVisible.value },
-            surfaceType = SURFACE_TYPE_TEXTURE_VIEW, // texture view is better inside lazy layouts.
+            modifier = videoModifier,
+            surfaceType = SURFACE_TYPE_TEXTURE_VIEW,
             contentScale = contentScale,
         )
 
         mediaItem.src.waveformData?.let { Waveform(it, controllerState, Modifier.align(Alignment.Center)) }
 
         if (showControls) {
+            TopGradientOverlay(
+                controllerVisible = controllerVisible,
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
+
+            BottomGradientOverlay(
+                controllerVisible = controllerVisible,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+
             RenderTopButtons(
                 mediaData = mediaItem.src,
                 controllerState = controllerState,
@@ -95,7 +136,13 @@ fun RenderVideoPlayer(
                 accountViewModel = accountViewModel,
             )
 
-            RenderCenterButtons(controllerState, controllerVisible, Modifier.align(Alignment.Center))
+            RenderCenterButtons(
+                controllerState = controllerState,
+                controllerVisible = controllerVisible,
+                modifier = Modifier.align(Alignment.Center),
+                isLiveStream = isLive,
+                videoDurationMs = controllerState.controller.duration,
+            )
 
             RenderAnimatedBottomInfo(controllerState, controllerVisible, Modifier.align(Alignment.BottomCenter))
         }

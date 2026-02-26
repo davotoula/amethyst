@@ -21,10 +21,14 @@
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
 import androidx.annotation.OptIn
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
@@ -36,16 +40,48 @@ fun RenderCenterButtons(
     controllerState: MediaControllerState,
     controllerVisible: MutableState<Boolean>,
     modifier: Modifier,
+    isLiveStream: Boolean = false,
+    videoDurationMs: Long = 0L,
 ) {
     val state = rememberPlayPauseButtonState(controllerState.controller)
+    val skipSeconds = if (videoDurationMs in 1..30000) 5 else 10
 
-    AnimatedPlayPauseButton(controllerVisible, modifier, !state.showPlay) {
-        state.onClick()
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(32.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (!isLiveStream) {
+            AnimatedSkipButton(
+                controllerVisible = controllerVisible,
+                isForward = false,
+                skipSeconds = skipSeconds,
+            ) {
+                val newPosition = (controllerState.controller.currentPosition - skipSeconds * 1000).coerceAtLeast(0)
+                controllerState.controller.seekTo(newPosition)
+            }
+        }
+
+        AnimatedPlayPauseButton(controllerVisible, Modifier, !state.showPlay) {
+            state.onClick()
+        }
+
+        if (!isLiveStream) {
+            AnimatedSkipButton(
+                controllerVisible = controllerVisible,
+                isForward = true,
+                skipSeconds = skipSeconds,
+            ) {
+                val duration = controllerState.controller.duration
+                val newPosition = (controllerState.controller.currentPosition + skipSeconds * 1000).coerceAtMost(duration)
+                controllerState.controller.seekTo(newPosition)
+            }
+        }
     }
 
     if (!state.showPlay) {
         LaunchedEffect(state.showPlay) {
-            delay(2000)
+            delay(3000)
             controllerVisible.value = false
         }
     }
