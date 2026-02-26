@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.playback.composable.SKIP_SECONDS
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
@@ -50,11 +51,7 @@ private val FadeOut = fadeOut()
 fun SkipBackButtonPreview() {
     ThemeComparisonColumn {
         Box(Modifier.background(BitcoinOrange)) {
-            SkipButton(
-                isForward = false,
-                skipSeconds = 10,
-                onClick = {},
-            )
+            SkipButton(isForward = false, onClick = {})
         }
     }
 }
@@ -64,11 +61,7 @@ fun SkipBackButtonPreview() {
 fun SkipForwardButtonPreview() {
     ThemeComparisonColumn {
         Box(Modifier.background(BitcoinOrange)) {
-            SkipButton(
-                isForward = true,
-                skipSeconds = 10,
-                onClick = {},
-            )
+            SkipButton(isForward = true, onClick = {})
         }
     }
 }
@@ -77,7 +70,6 @@ fun SkipForwardButtonPreview() {
 fun AnimatedSkipButton(
     controllerVisible: State<Boolean>,
     isForward: Boolean,
-    skipSeconds: Int = 10,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
@@ -87,18 +79,13 @@ fun AnimatedSkipButton(
         enter = FadeIn,
         exit = FadeOut,
     ) {
-        SkipButton(
-            isForward = isForward,
-            skipSeconds = skipSeconds,
-            onClick = onClick,
-        )
+        SkipButton(isForward = isForward, onClick = onClick)
     }
 }
 
 @Composable
 fun SkipButton(
     isForward: Boolean,
-    skipSeconds: Int = 10,
     onClick: () -> Unit,
 ) {
     IconButton(
@@ -109,9 +96,9 @@ fun SkipButton(
             imageVector = if (isForward) Icons.Default.Forward10 else Icons.Default.Replay10,
             contentDescription =
                 if (isForward) {
-                    stringRes(R.string.skip_forward, skipSeconds)
+                    stringRes(R.string.skip_forward, SKIP_SECONDS)
                 } else {
-                    stringRes(R.string.skip_back, skipSeconds)
+                    stringRes(R.string.skip_back, SKIP_SECONDS)
                 },
             tint = Color.White,
             modifier = Modifier.size(32.dp),

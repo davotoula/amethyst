@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
-import com.vitorpamplona.amethyst.service.playback.composable.computeSkipSeconds
+import com.vitorpamplona.amethyst.service.playback.composable.SKIP_MILLIS
 import kotlinx.coroutines.delay
 
 @OptIn(UnstableApi::class)
@@ -42,10 +42,8 @@ fun RenderCenterButtons(
     controllerVisible: MutableState<Boolean>,
     modifier: Modifier,
     isLiveStream: Boolean = false,
-    videoDurationMs: Long = 0L,
 ) {
     val state = rememberPlayPauseButtonState(controllerState.controller)
-    val skipSeconds = computeSkipSeconds(videoDurationMs)
 
     Row(
         modifier = modifier,
@@ -56,9 +54,8 @@ fun RenderCenterButtons(
             AnimatedSkipButton(
                 controllerVisible = controllerVisible,
                 isForward = false,
-                skipSeconds = skipSeconds,
             ) {
-                val newPosition = (controllerState.controller.currentPosition - skipSeconds * 1000).coerceAtLeast(0)
+                val newPosition = (controllerState.controller.currentPosition - SKIP_MILLIS).coerceAtLeast(0)
                 controllerState.controller.seekTo(newPosition)
             }
         }
@@ -71,11 +68,10 @@ fun RenderCenterButtons(
             AnimatedSkipButton(
                 controllerVisible = controllerVisible,
                 isForward = true,
-                skipSeconds = skipSeconds,
             ) {
                 val duration = controllerState.controller.duration
-                val newPosition = (controllerState.controller.currentPosition + skipSeconds * 1000).coerceAtMost(duration)
-                controllerState.controller.seekTo(newPosition)
+                val newPosition = controllerState.controller.currentPosition + SKIP_MILLIS
+                controllerState.controller.seekTo(if (duration > 0) newPosition.coerceAtMost(duration) else newPosition)
             }
         }
     }

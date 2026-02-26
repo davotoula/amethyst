@@ -25,6 +25,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -123,6 +124,10 @@ fun RenderTopButtons(
     val context = LocalContext.current
     val shareDialogVisible = remember { mutableStateOf(false) }
 
+    LaunchedEffect(controllerVisible.value) {
+        if (!controllerVisible.value) shareDialogVisible.value = false
+    }
+
     Row(modifier) {
         if (onZoomClick != null) {
             FullScreenButton(
@@ -137,39 +142,41 @@ fun RenderTopButtons(
             toggle = onMuteClick,
         )
 
-        AnimatedOverflowMenuButton(
-            controllerVisible = controllerVisible,
-            showShare = true,
-            showSave = !isLive,
-            showPip = pipSupported,
-            onShareClick = { shareDialogVisible.value = true },
-            onSaveClick = {
-                accountViewModel.saveMediaToGallery(mediaData.videoUri, mediaData.mimeType, context)
-            },
-            onPipClick = onPictureInPictureClick,
-        )
-    }
+        Box {
+            AnimatedOverflowMenuButton(
+                controllerVisible = controllerVisible,
+                showShare = true,
+                showSave = !isLive,
+                showPip = pipSupported,
+                onShareClick = { shareDialogVisible.value = true },
+                onSaveClick = {
+                    accountViewModel.saveMediaToGallery(mediaData.videoUri, mediaData.mimeType, context)
+                },
+                onPipClick = onPictureInPictureClick,
+            )
 
-    if (shareDialogVisible.value) {
-        ShareMediaAction(
-            popupExpanded = shareDialogVisible,
-            videoUri = mediaData.videoUri,
-            postNostrUri = mediaData.callbackUri,
-            blurhash = null,
-            dim = null,
-            hash = null,
-            mimeType = mediaData.mimeType,
-            onDismiss = { shareDialogVisible.value = false },
-            content =
-                MediaUrlVideo(
-                    url = mediaData.videoUri,
+            if (shareDialogVisible.value) {
+                ShareMediaAction(
+                    popupExpanded = shareDialogVisible,
+                    videoUri = mediaData.videoUri,
+                    postNostrUri = mediaData.callbackUri,
+                    blurhash = null,
+                    dim = null,
+                    hash = null,
                     mimeType = mediaData.mimeType,
-                    artworkUri = mediaData.artworkUri,
-                    authorName = mediaData.authorName,
-                    description = mediaData.title,
-                    uri = mediaData.callbackUri,
-                ),
-            accountViewModel = accountViewModel,
-        )
+                    onDismiss = { shareDialogVisible.value = false },
+                    content =
+                        MediaUrlVideo(
+                            url = mediaData.videoUri,
+                            mimeType = mediaData.mimeType,
+                            artworkUri = mediaData.artworkUri,
+                            authorName = mediaData.authorName,
+                            description = mediaData.title,
+                            uri = mediaData.callbackUri,
+                        ),
+                    accountViewModel = accountViewModel,
+                )
+            }
+        }
     }
 }

@@ -48,7 +48,8 @@ import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
 import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
-internal fun computeSkipSeconds(durationMs: Long): Int = if (durationMs in 1..30000) 5 else 10
+internal const val SKIP_SECONDS = 10
+internal const val SKIP_MILLIS = SKIP_SECONDS * 1000L
 
 private fun getVideoSizeDp(player: Player): Size? {
     var videoSize = Size(player.videoSize.width.toFloat(), player.videoSize.height.toFloat())
@@ -90,19 +91,18 @@ fun RenderVideoPlayer(
                         onTap = { controllerVisible.value = !controllerVisible.value },
                         onDoubleTap = { offset ->
                             if (!isLive) {
-                                val skipSeconds = computeSkipSeconds(controllerState.controller.duration)
                                 val isLeftSide = offset.x < containerSize.value.width / 2
                                 if (isLeftSide) {
                                     val newPosition =
-                                        (controllerState.controller.currentPosition - skipSeconds * 1000)
+                                        (controllerState.controller.currentPosition - SKIP_MILLIS)
                                             .coerceAtLeast(0)
                                     controllerState.controller.seekTo(newPosition)
                                 } else {
                                     val duration = controllerState.controller.duration
-                                    val newPosition =
-                                        (controllerState.controller.currentPosition + skipSeconds * 1000)
-                                            .coerceAtMost(duration)
-                                    controllerState.controller.seekTo(newPosition)
+                                    val newPosition = controllerState.controller.currentPosition + SKIP_MILLIS
+                                    controllerState.controller.seekTo(
+                                        if (duration > 0) newPosition.coerceAtMost(duration) else newPosition,
+                                    )
                                 }
                             }
                         },
@@ -143,7 +143,6 @@ fun RenderVideoPlayer(
                 controllerVisible = controllerVisible,
                 modifier = Modifier.align(Alignment.Center),
                 isLiveStream = isLive,
-                videoDurationMs = controllerState.controller.duration,
             )
 
             RenderAnimatedBottomInfo(controllerState, controllerVisible, Modifier.align(Alignment.BottomCenter))
