@@ -51,6 +51,15 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 internal const val SKIP_SECONDS = 10
 internal const val SKIP_MILLIS = SKIP_SECONDS * 1000L
 
+internal fun Player.seekBackward() {
+    seekTo((currentPosition - SKIP_MILLIS).coerceAtLeast(0))
+}
+
+internal fun Player.skipForward() {
+    val newPosition = currentPosition + SKIP_MILLIS
+    seekTo(if (duration > 0) newPosition.coerceAtMost(duration) else newPosition)
+}
+
 private fun getVideoSizeDp(player: Player): Size? {
     var videoSize = Size(player.videoSize.width.toFloat(), player.videoSize.height.toFloat())
 
@@ -93,16 +102,9 @@ fun RenderVideoPlayer(
                             if (!isLive) {
                                 val isLeftSide = offset.x < containerSize.value.width / 2
                                 if (isLeftSide) {
-                                    val newPosition =
-                                        (controllerState.controller.currentPosition - SKIP_MILLIS)
-                                            .coerceAtLeast(0)
-                                    controllerState.controller.seekTo(newPosition)
+                                    controllerState.controller.seekBackward()
                                 } else {
-                                    val duration = controllerState.controller.duration
-                                    val newPosition = controllerState.controller.currentPosition + SKIP_MILLIS
-                                    controllerState.controller.seekTo(
-                                        if (duration > 0) newPosition.coerceAtMost(duration) else newPosition,
-                                    )
+                                    controllerState.controller.skipForward()
                                 }
                             }
                         },

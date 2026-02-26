@@ -88,20 +88,9 @@ fun SkipButton(
     isForward: Boolean,
     onClick: () -> Unit,
 ) {
-    IconButton(
-        onClick = onClick,
-        modifier = Modifier.size(48.dp),
-    ) {
-        Icon(
-            imageVector = if (isForward) Icons.Default.Forward10 else Icons.Default.Replay10,
-            contentDescription =
-                if (isForward) {
-                    stringRes(R.string.skip_forward, SKIP_SECONDS)
-                } else {
-                    stringRes(R.string.skip_back, SKIP_SECONDS)
-                },
-            tint = Color.White,
-            modifier = Modifier.size(32.dp),
-        )
+    val icon = if (isForward) Icons.Default.Forward10 else Icons.Default.Replay10
+    val label = if (isForward) stringRes(R.string.skip_forward, SKIP_SECONDS) else stringRes(R.string.skip_back, SKIP_SECONDS)
+    IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
+        Icon(imageVector = icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(32.dp))
     }
 }

@@ -53,10 +53,11 @@ private val BottomGradientColors =
     )
 
 @Composable
-fun TopGradientOverlay(
+private fun GradientOverlay(
     controllerVisible: State<Boolean>,
+    colors: List<Color>,
+    height: Dp,
     modifier: Modifier = Modifier,
-    height: Dp = 80.dp,
 ) {
     AnimatedVisibility(
         visible = controllerVisible.value,
@@ -69,33 +70,21 @@ fun TopGradientOverlay(
                 Modifier
                     .fillMaxWidth()
                     .height(height)
-                    .background(
-                        brush = Brush.verticalGradient(colors = TopGradientColors),
-                    ),
+                    .background(brush = Brush.verticalGradient(colors = colors)),
         )
     }
 }
+
+@Composable
+fun TopGradientOverlay(
+    controllerVisible: State<Boolean>,
+    modifier: Modifier = Modifier,
+    height: Dp = 80.dp,
+) = GradientOverlay(controllerVisible, TopGradientColors, height, modifier)
 
 @Composable
 fun BottomGradientOverlay(
     controllerVisible: State<Boolean>,
     modifier: Modifier = Modifier,
     height: Dp = 120.dp,
-) {
-    AnimatedVisibility(
-        visible = controllerVisible.value,
-        modifier = modifier,
-        enter = FadeIn,
-        exit = FadeOut,
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(height)
-                    .background(
-                        brush = Brush.verticalGradient(colors = BottomGradientColors),
-                    ),
-        )
-    }
-}
+) = GradientOverlay(controllerVisible, BottomGradientColors, height, modifier)

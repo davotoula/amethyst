@@ -32,7 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
-import com.vitorpamplona.amethyst.service.playback.composable.SKIP_MILLIS
+import com.vitorpamplona.amethyst.service.playback.composable.seekBackward
+import com.vitorpamplona.amethyst.service.playback.composable.skipForward
 import kotlinx.coroutines.delay
 
 @OptIn(UnstableApi::class)
@@ -51,12 +52,8 @@ fun RenderCenterButtons(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (!isLiveStream) {
-            AnimatedSkipButton(
-                controllerVisible = controllerVisible,
-                isForward = false,
-            ) {
-                val newPosition = (controllerState.controller.currentPosition - SKIP_MILLIS).coerceAtLeast(0)
-                controllerState.controller.seekTo(newPosition)
+            AnimatedSkipButton(controllerVisible = controllerVisible, isForward = false) {
+                controllerState.controller.seekBackward()
             }
         }
 
@@ -65,13 +62,8 @@ fun RenderCenterButtons(
         }
 
         if (!isLiveStream) {
-            AnimatedSkipButton(
-                controllerVisible = controllerVisible,
-                isForward = true,
-            ) {
-                val duration = controllerState.controller.duration
-                val newPosition = controllerState.controller.currentPosition + SKIP_MILLIS
-                controllerState.controller.seekTo(if (duration > 0) newPosition.coerceAtMost(duration) else newPosition)
+            AnimatedSkipButton(controllerVisible = controllerVisible, isForward = true) {
+                controllerState.controller.skipForward()
             }
         }
     }
