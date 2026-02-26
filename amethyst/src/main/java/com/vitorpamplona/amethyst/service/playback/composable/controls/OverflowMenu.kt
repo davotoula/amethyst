@@ -117,7 +117,7 @@ fun OverflowMenuButton(
                 .clip(CircleShape)
                 .fillMaxSize(0.7f)
                 .align(Alignment.Center)
-                .background(MaterialTheme.colorScheme.background),
+                .background(Color.Black.copy(alpha = 0.4f)),
         )
 
         IconButton(

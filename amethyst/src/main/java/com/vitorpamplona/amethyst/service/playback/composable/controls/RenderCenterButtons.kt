@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
+import com.vitorpamplona.amethyst.service.playback.composable.computeSkipSeconds
 import kotlinx.coroutines.delay
 
 @OptIn(UnstableApi::class)
@@ -44,7 +45,7 @@ fun RenderCenterButtons(
     videoDurationMs: Long = 0L,
 ) {
     val state = rememberPlayPauseButtonState(controllerState.controller)
-    val skipSeconds = if (videoDurationMs in 1..30000) 5 else 10
+    val skipSeconds = computeSkipSeconds(videoDurationMs)
 
     Row(
         modifier = modifier,

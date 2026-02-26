@@ -48,6 +48,8 @@ import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
 import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
+internal fun computeSkipSeconds(durationMs: Long): Int = if (durationMs in 1..30000) 5 else 10
+
 private fun getVideoSizeDp(player: Player): Size? {
     var videoSize = Size(player.videoSize.width.toFloat(), player.videoSize.height.toFloat())
 
@@ -78,17 +80,17 @@ fun RenderVideoPlayer(
 ) {
     val containerSize = remember { mutableStateOf(IntSize.Zero) }
     val isLive = isLiveStreaming(mediaItem.src.videoUri)
-    val skipSeconds = if (controllerState.controller.duration in 1..30000) 5 else 10
 
     Box(
         modifier =
             borderModifier
                 .onSizeChanged { containerSize.value = it }
-                .pointerInput(Unit) {
+                .pointerInput(isLive, controllerState) {
                     detectTapGestures(
                         onTap = { controllerVisible.value = !controllerVisible.value },
                         onDoubleTap = { offset ->
                             if (!isLive) {
+                                val skipSeconds = computeSkipSeconds(controllerState.controller.duration)
                                 val isLeftSide = offset.x < containerSize.value.width / 2
                                 if (isLeftSide) {
                                     val newPosition =

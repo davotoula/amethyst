@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.service.playback.composable.controls
 
 import android.content.pm.PackageManager
-import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -79,11 +78,7 @@ fun RenderTopButtons(
     val isLive = isLiveStreaming(mediaData.videoUri)
     val pipSupported =
         remember {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
-            } else {
-                false
-            }
+            context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
         }
 
     RenderTopButtons(
@@ -155,24 +150,26 @@ fun RenderTopButtons(
         )
     }
 
-    ShareMediaAction(
-        popupExpanded = shareDialogVisible,
-        videoUri = mediaData.videoUri,
-        postNostrUri = mediaData.callbackUri,
-        blurhash = null,
-        dim = null,
-        hash = null,
-        mimeType = mediaData.mimeType,
-        onDismiss = { shareDialogVisible.value = false },
-        content =
-            MediaUrlVideo(
-                url = mediaData.videoUri,
-                mimeType = mediaData.mimeType,
-                artworkUri = mediaData.artworkUri,
-                authorName = mediaData.authorName,
-                description = mediaData.title,
-                uri = mediaData.callbackUri,
-            ),
-        accountViewModel = accountViewModel,
-    )
+    if (shareDialogVisible.value) {
+        ShareMediaAction(
+            popupExpanded = shareDialogVisible,
+            videoUri = mediaData.videoUri,
+            postNostrUri = mediaData.callbackUri,
+            blurhash = null,
+            dim = null,
+            hash = null,
+            mimeType = mediaData.mimeType,
+            onDismiss = { shareDialogVisible.value = false },
+            content =
+                MediaUrlVideo(
+                    url = mediaData.videoUri,
+                    mimeType = mediaData.mimeType,
+                    artworkUri = mediaData.artworkUri,
+                    authorName = mediaData.authorName,
+                    description = mediaData.title,
+                    uri = mediaData.callbackUri,
+                ),
+            accountViewModel = accountViewModel,
+        )
+    }
 }
