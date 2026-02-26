@@ -55,6 +55,9 @@ import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.VolumeBottomIconSize
 
+private val FadeIn = fadeIn()
+private val FadeOut = fadeOut()
+
 @Preview
 @Composable
 fun OverflowMenuButtonPreview() {
@@ -86,8 +89,8 @@ fun AnimatedOverflowMenuButton(
     AnimatedVisibility(
         visible = controllerVisible.value,
         modifier = modifier,
-        enter = remember { fadeIn() },
-        exit = remember { fadeOut() },
+        enter = FadeIn,
+        exit = FadeOut,
     ) {
         OverflowMenuButton(
             showShare = showShare,

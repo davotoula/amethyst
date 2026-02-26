@@ -29,12 +29,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+
+private val FadeIn = fadeIn()
+private val FadeOut = fadeOut()
 
 private val TopGradientColors =
     listOf(
@@ -59,8 +61,8 @@ fun TopGradientOverlay(
     AnimatedVisibility(
         visible = controllerVisible.value,
         modifier = modifier,
-        enter = remember { fadeIn() },
-        exit = remember { fadeOut() },
+        enter = FadeIn,
+        exit = FadeOut,
     ) {
         Box(
             modifier =
@@ -83,8 +85,8 @@ fun BottomGradientOverlay(
     AnimatedVisibility(
         visible = controllerVisible.value,
         modifier = modifier,
-        enter = remember { fadeIn() },
-        exit = remember { fadeOut() },
+        enter = FadeIn,
+        exit = FadeOut,
     ) {
         Box(
             modifier =

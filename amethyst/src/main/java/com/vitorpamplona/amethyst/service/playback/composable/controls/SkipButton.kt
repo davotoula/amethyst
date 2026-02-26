@@ -33,8 +33,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
@@ -43,6 +41,9 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
+
+private val FadeIn = fadeIn()
+private val FadeOut = fadeOut()
 
 @Preview
 @Composable
@@ -83,8 +84,8 @@ fun AnimatedSkipButton(
     AnimatedVisibility(
         visible = controllerVisible.value,
         modifier = modifier,
-        enter = remember { fadeIn() },
-        exit = remember { fadeOut() },
+        enter = FadeIn,
+        exit = FadeOut,
     ) {
         SkipButton(
             isForward = isForward,
@@ -100,25 +101,20 @@ fun SkipButton(
     skipSeconds: Int = 10,
     onClick: () -> Unit,
 ) {
-    Box(
+    IconButton(
+        onClick = onClick,
         modifier = Modifier.size(48.dp),
-        contentAlignment = Alignment.Center,
     ) {
-        IconButton(
-            onClick = onClick,
-            modifier = Modifier.size(48.dp),
-        ) {
-            Icon(
-                imageVector = if (isForward) Icons.Default.Forward10 else Icons.Default.Replay10,
-                contentDescription =
-                    if (isForward) {
-                        stringRes(R.string.skip_forward, skipSeconds)
-                    } else {
-                        stringRes(R.string.skip_back, skipSeconds)
-                    },
-                tint = Color.White,
-                modifier = Modifier.size(32.dp),
-            )
-        }
+        Icon(
+            imageVector = if (isForward) Icons.Default.Forward10 else Icons.Default.Replay10,
+            contentDescription =
+                if (isForward) {
+                    stringRes(R.string.skip_forward, skipSeconds)
+                } else {
+                    stringRes(R.string.skip_back, skipSeconds)
+                },
+            tint = Color.White,
+            modifier = Modifier.size(32.dp),
+        )
     }
 }
