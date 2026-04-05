@@ -209,6 +209,22 @@ class DraftEventHandler(
         }
     }
 
+    override suspend fun delete(
+        event: DraftWrapEvent,
+        eventNote: Note,
+    ) {
+        eventNote.replyTo?.forEach { it.removeReply(eventNote) }
+
+        val rumor = account.draftsDecryptionCache.preCachedDraft(event) ?: account.draftsDecryptionCache.cachedDraft(event)
+        if (rumor != null) {
+            when (rumor) {
+                is ChatroomKeyable -> {
+                    account.chatroomList.delete(rumor, eventNote)
+                }
+            }
+        }
+    }
+
     fun indexDraftAsRealEvent(
         draftEventWrap: Note,
         rumor: Event,
