@@ -417,7 +417,10 @@ class UploadOrchestrator {
                     ?: return error(R.string.upload_cancelled)
             tracker.track(finalUri)
 
+            // Encrypt reads the entire file into memory, so free intermediates
+            // early to reduce peak disk usage for large videos.
             val encrypted = EncryptFiles().encryptFile(context, finalUri, encrypt)
+            tracker.cleanupAll()
             tracker.track(encrypted.uri)
 
             return when (server.type) {

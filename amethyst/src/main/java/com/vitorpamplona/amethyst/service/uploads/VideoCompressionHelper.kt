@@ -223,8 +223,6 @@ object VideoCompressionHelper {
                                         return
                                     }
 
-                                    // If the coroutine was already cancelled (e.g. timeout),
-                                    // clean up the compressed file and bail out.
                                     if (!continuation.isActive) {
                                         if (!File(path).delete()) {
                                             Log.w(LOG_TAG) { "Failed to delete orphaned compressed file: $path" }
