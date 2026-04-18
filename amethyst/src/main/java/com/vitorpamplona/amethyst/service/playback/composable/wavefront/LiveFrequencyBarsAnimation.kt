@@ -23,54 +23,45 @@ package com.vitorpamplona.amethyst.service.playback.composable.wavefront
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.media3.common.C
 import androidx.media3.common.Player
-import androidx.media3.common.Tracks
+import androidx.media3.exoplayer.ExoPlayer
+import com.vitorpamplona.amethyst.commons.audio.AudioSpectrumProvider
+import com.vitorpamplona.amethyst.commons.audio.FrequencyBars
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
-import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 
-fun Tracks.isAudio() = groups.none { it.type == C.TRACK_TYPE_VIDEO }
-
+/**
+ * Live FFT bars tied to the given ExoPlayer's audio session id. Rebuilds the
+ * underlying [android.media.audiofx.Visualizer] whenever the session id changes
+ * (e.g. when the pool reuses a player for a new track).
+ */
 @Composable
-fun AudioPlayingAnimation(
-    controllerState: MediaControllerState,
-    waveform: WaveformData?,
+fun LiveFrequencyBarsAnimation(
+    mediaControllerState: MediaControllerState,
     modifier: Modifier = Modifier,
-    hasArtwork: Boolean = false,
+    binCount: Int = 32,
 ) {
-    var isAudio by remember { mutableStateOf(controllerState.controller.currentTracks.isAudio()) }
+    val controller = mediaControllerState.controller
+    val exo = controller as? ExoPlayer ?: return
 
-    DisposableEffect(controllerState.controller) {
+    var sessionId by remember { mutableIntStateOf(exo.audioSessionId) }
+    DisposableEffect(controller) {
         val listener =
             object : Player.Listener {
-                override fun onTracksChanged(tracks: Tracks) {
-                    super.onTracksChanged(tracks)
-                    isAudio = tracks.isAudio()
+                override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                    sessionId = audioSessionId
                 }
             }
-        controllerState.controller.addListener(listener)
-        onDispose { controllerState.controller.removeListener(listener) }
+        controller.addListener(listener)
+        onDispose { controller.removeListener(listener) }
     }
 
-    if (isAudio) {
-        if (waveform != null) {
-            Waveform(waveform, controllerState, modifier)
-        } else if (!hasArtwork) {
-            // No cover art: show live FFT bars driven by ExoPlayer's audio session.
-            // Falls back to the fake animation if the Visualizer API can't attach.
-            LiveFrequencyBarsAnimation(
-                mediaControllerState = controllerState,
-                modifier = modifier,
-            )
-        } else {
-            FakeWaveformAnimation(
-                mediaControllerState = controllerState,
-                modifier = modifier,
-            )
-        }
-    }
+    if (sessionId == 0) return
+
+    val provider = remember { AudioSpectrumProvider() }
+    val flow = remember(sessionId, binCount) { provider.spectrum(sessionId, binCount) }
+    FrequencyBars(spectrum = flow, modifier = modifier)
 }

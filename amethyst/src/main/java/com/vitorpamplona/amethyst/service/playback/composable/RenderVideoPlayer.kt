@@ -120,9 +120,10 @@ fun RenderVideoPlayer(
         )
 
         AudioPlayingAnimation(
-            controllerState,
-            mediaItem.src.waveformData,
-            Modifier.fillMaxSize().align(Alignment.Center),
+            controllerState = controllerState,
+            waveform = mediaItem.src.waveformData,
+            modifier = Modifier.fillMaxSize().align(Alignment.Center),
+            hasArtwork = mediaItem.src.artworkUri != null,
         )
 
         if (showControls) {
