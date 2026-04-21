@@ -223,6 +223,13 @@ object VideoCompressionHelper {
                                         return
                                     }
 
+                                    if (!continuation.isActive) {
+                                        if (!File(path).delete()) {
+                                            Log.w(LOG_TAG) { "Failed to delete orphaned compressed file: $path" }
+                                        }
+                                        return
+                                    }
+
                                     val reductionPercent =
                                         if (originalSize > 0) {
                                             ((originalSize - size) * 100.0 / originalSize).toInt()
@@ -233,17 +240,15 @@ object VideoCompressionHelper {
                                     // Sanity check: compression not smaller than original
                                     if (originalSize in 1..size) {
                                         if (!File(path).delete()) {
-                                            Log.w("VideoCompressionHelper") { "Failed to delete compressed file: $path" }
+                                            Log.w(LOG_TAG) { "Failed to delete compressed file: $path" }
                                         }
                                         applicationContext.notifyUser(
                                             "Compressed file larger than original. Using original.",
                                             LogLevel.WARN,
                                         )
-                                        if (continuation.isActive) {
-                                            continuation.resume(
-                                                MediaCompressorResult(uri, contentType, null),
-                                            )
-                                        }
+                                        continuation.resume(
+                                            MediaCompressorResult(uri, contentType, originalSize),
+                                        )
                                         return
                                     }
 
@@ -262,11 +267,9 @@ object VideoCompressionHelper {
                                             "Compressed [$size] ($reductionPercent% reduction)"
                                     }
 
-                                    if (continuation.isActive) {
-                                        continuation.resume(
-                                            MediaCompressorResult(Uri.fromFile(File(path)), contentType, size),
-                                        )
-                                    }
+                                    continuation.resume(
+                                        MediaCompressorResult(Uri.fromFile(File(path)), contentType, size),
+                                    )
                                 }
 
                                 override fun onFailure(

@@ -328,22 +328,36 @@ class UploadOrchestrator {
     }
 
     /**
-     * Deletes a temporary file created during the upload pipeline if its URI
-     * differs from the original (meaning it's an intermediate temp file, not the user's content).
+     * Collects intermediate temp URIs created during the upload pipeline and
+     * deletes them all in one go. Only URIs that differ from [originalUri] are
+     * deleted — the user's original content is never touched.
      */
-    private fun deleteTempUri(
-        tempUri: Uri,
-        originalUri: Uri,
+    private class TempFileTracker(
+        private val originalUri: Uri,
     ) {
-        if (tempUri == originalUri) return
-        try {
-            val path = tempUri.path ?: return
-            val file = File(path)
-            if (file.delete()) {
-                Log.d("UploadOrchestrator") { "Deleted temp file: $path" }
+        private val tempUris = mutableListOf<Uri>()
+
+        fun track(uri: Uri) {
+            if (uri != originalUri) tempUris.add(uri)
+        }
+
+        fun cleanupAll() {
+            for (tempUri in tempUris) {
+                deleteTempFile(tempUri)
             }
-        } catch (e: Exception) {
-            Log.w("UploadOrchestrator", "Failed to delete temp file: ${tempUri.path}", e)
+            tempUris.clear()
+        }
+
+        private fun deleteTempFile(tempUri: Uri) {
+            try {
+                val path = tempUri.path ?: return
+                val file = File(path)
+                if (file.delete()) {
+                    Log.d("UploadOrchestrator") { "Deleted temp file: $path" }
+                }
+            } catch (e: Exception) {
+                Log.w("UploadOrchestrator", "Failed to delete temp file: ${tempUri.path}", e)
+            }
         }
     }
 
@@ -361,24 +375,23 @@ class UploadOrchestrator {
         onStrippingFailed: suspend () -> Boolean = { true },
         convertGifToMp4: Boolean = false,
     ): UploadingFinalState {
-        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265, convertGifToMp4)
-
-        val finalUri =
-            stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
-                ?: return error(R.string.upload_cancelled).also {
-                    deleteTempUri(compressed.uri, uri)
-                }
-
-        if (compressed.uri != finalUri) deleteTempUri(compressed.uri, uri)
-
+        val tracker = TempFileTracker(uri)
         try {
+            val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265, convertGifToMp4)
+            tracker.track(compressed.uri)
+
+            val finalUri =
+                stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
+                    ?: return error(R.string.upload_cancelled)
+            tracker.track(finalUri)
+
             return when (server.type) {
                 ServerType.NIP95 -> uploadNIP95(finalUri, compressed.contentType, null, null, context)
                 ServerType.NIP96 -> uploadNIP96(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
                 ServerType.Blossom -> uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
             }
         } finally {
-            deleteTempUri(finalUri, uri)
+            tracker.cleanupAll()
         }
     }
 
@@ -397,27 +410,29 @@ class UploadOrchestrator {
         onStrippingFailed: suspend () -> Boolean = { true },
         convertGifToMp4: Boolean = false,
     ): UploadingFinalState {
-        val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265, convertGifToMp4)
-
-        val finalUri =
-            stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
-                ?: return error(R.string.upload_cancelled).also {
-                    deleteTempUri(compressed.uri, uri)
-                }
-
-        if (compressed.uri != finalUri) deleteTempUri(compressed.uri, uri)
-
-        val encrypted = EncryptFiles().encryptFile(context, finalUri, encrypt)
-        deleteTempUri(finalUri, uri)
-
+        val tracker = TempFileTracker(uri)
         try {
+            val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265, convertGifToMp4)
+            tracker.track(compressed.uri)
+
+            val finalUri =
+                stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
+                    ?: return error(R.string.upload_cancelled)
+            tracker.track(finalUri)
+
+            // Encrypt reads the entire file into memory, so free intermediates
+            // early to reduce peak disk usage for large videos.
+            val encrypted = EncryptFiles().encryptFile(context, finalUri, encrypt)
+            tracker.cleanupAll()
+            tracker.track(encrypted.uri)
+
             return when (server.type) {
                 ServerType.NIP95 -> uploadNIP95(encrypted.uri, encrypted.contentType, compressed.contentType, encrypted.originalHash, context)
                 ServerType.NIP96 -> uploadNIP96(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
                 ServerType.Blossom -> uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
             }
         } finally {
-            deleteTempUri(encrypted.uri, uri)
+            tracker.cleanupAll()
         }
     }
 }
