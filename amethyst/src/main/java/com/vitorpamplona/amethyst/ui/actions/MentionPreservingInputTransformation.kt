@@ -24,8 +24,9 @@ import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldBuffer
 
 /**
- * Rejects any edit that partially modifies a previously-complete Nostr mention
- * (`@npub1…`, `nostr:npub1…`, `@nprofile1…`, `nostr:nprofile1…`).
+ * Protects Nostr mentions (`@npub1…`, `nostr:npub1…`, `@nprofile1…`,
+ * `nostr:nprofile1…`) against IME edits that would only modify part of the
+ * underlying bech32.
  *
  * Background: when an `OutputTransformation` collapses an underlying npub into a
  * short `@DisplayName`, Compose's auto-derived offset mapping uses identity inside
@@ -38,10 +39,11 @@ import androidx.compose.foundation.text.input.TextFieldBuffer
  * cursor lands in the middle of it. Gboard never enters this state because it
  * does not recompose previously-committed tokens.
  *
- * This guard runs on every input change. If the change's original-text range
- * partially intersects a complete mention but does not fully cover it, the entire
- * change is reverted. The mention stays atomic; the IME re-reads the unchanged
- * buffer and moves on.
+ * This guard runs on every input change. If a change's original-text range
+ * partially intersects a complete mention without fully covering it, the IME edit
+ * is reverted and the entire mention is deleted atomically — matching the user
+ * expectation that backspacing into a `@DisplayName` chip removes the whole chip,
+ * including multi-word display names like `@John Smith`.
  */
 object MentionPreservingInputTransformation : InputTransformation {
     private val mentionRegex =
@@ -57,7 +59,8 @@ object MentionPreservingInputTransformation : InputTransformation {
         val mentions = mentionRegex.findAll(original).toList()
         if (mentions.isEmpty()) return
 
-        for (i in 0 until changeCount) {
+        var partiallyAffected: MatchResult? = null
+        outer@ for (i in 0 until changeCount) {
             val origRange = changes.getOriginalRange(i)
             val origStart = origRange.min
             val origEnd = origRange.max
@@ -67,10 +70,25 @@ object MentionPreservingInputTransformation : InputTransformation {
                 val overlaps = origStart < mEndExclusive && origEnd > mStart
                 val fullyCovers = origStart <= mStart && origEnd >= mEndExclusive
                 if (overlaps && !fullyCovers) {
-                    revertAllChanges()
-                    return
+                    partiallyAffected = mention
+                    break@outer
                 }
             }
+        }
+
+        if (partiallyAffected != null) {
+            val mStart = partiallyAffected.range.first
+            val mEndExclusive = partiallyAffected.range.last + 1
+            // Discard the IME's edit, then collapse the entire mention (plus an
+            // immediately-trailing space if present) in one atomic step.
+            revertAllChanges()
+            val deleteEnd =
+                if (mEndExclusive < length && asCharSequence()[mEndExclusive] == ' ') {
+                    mEndExclusive + 1
+                } else {
+                    mEndExclusive
+                }
+            replace(mStart, deleteEnd, "")
         }
     }
 }
