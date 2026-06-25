@@ -20,16 +20,22 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
 
+import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
+import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.mapOfSet
+import java.util.concurrent.ConcurrentHashMap
 
 fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
     val set = mutableSetOf<NormalizedRelayUrl>()
@@ -124,7 +130,58 @@ fun filterMissingEvents(keys: List<EventFinderQueryState>): List<RelayBasedFilte
             }
         }
 
-    return filterMissingEvents(eventsPerRelay)
+    return filterMissingEvents(eventsPerRelay) + nip65BackfillFilters(keys)
+}
+
+private const val NIP65_BACKFILL_BACKOFF_SECONDS = 300L
+private val nip65BackfillAttempts = ConcurrentHashMap<HexKey, Long>()
+
+/**
+ * NIP-65 backfill for the authors a quoting post cites.
+ *
+ * [potentialRelaysToFindEvent] routes a missing quoted event through the outbox relays of the
+ * p-tagged authors of the posts that quote it ([Note.inGatherers]) — but only when those authors'
+ * NIP-65 is already resolved. For a long-tail / bridged author whose kind-10002 we never fetched,
+ * `outboxRelays()` stays null and the event (which carries no relay hint and isn't on index/search
+ * relays) stays unfindable. This emits a parallel kind-10002 request for those unresolved authors
+ * against the default indexer + search relays so their outbox can resolve and the next pass finds
+ * the event.
+ *
+ * [NoteEventLoaderSubAssembler] re-runs on every EOSE (`invalidateAfterEose`), so a per-author
+ * backoff keeps an author whose NIP-65 is genuinely unreachable from being re-requested forever.
+ */
+fun nip65BackfillFilters(keys: List<EventFinderQueryState>): List<RelayBasedFilter> {
+    val citedAuthors = mutableSetOf<HexKey>()
+    keys.forEach { key ->
+        val note = key.note
+        if (note !is AddressableNote && note.event == null) {
+            note.inGatherers?.forEach { parent ->
+                if (parent is Note) {
+                    (parent.event as? PubKeyHintProvider)?.linkedPubKeys()?.let(citedAuthors::addAll)
+                }
+            }
+        }
+    }
+
+    val unresolved = authorsNeedingNip65Backfill(citedAuthors) { LocalCache.getUserIfExists(it)?.outboxRelays()?.toSet() }
+    if (unresolved.isEmpty()) return emptyList()
+
+    val now = TimeUtils.now()
+    val toFetch =
+        unresolved.filterTo(mutableSetOf()) { author ->
+            val last = nip65BackfillAttempts[author]
+            last == null || now - last >= NIP65_BACKFILL_BACKOFF_SECONDS
+        }
+    if (toFetch.isEmpty()) return emptyList()
+    toFetch.forEach { nip65BackfillAttempts[it] = now }
+
+    val authors = toFetch.sorted()
+    return (DefaultIndexerRelayList + DefaultSearchRelayList).map { relay ->
+        RelayBasedFilter(
+            relay = relay,
+            filter = Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), authors = authors),
+        )
+    }
 }
 
 fun filterMissingEvents(missingEventIds: Map<NormalizedRelayUrl, Set<String>>): List<RelayBasedFilter> {
