@@ -51,6 +51,13 @@ import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEve
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Request
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
+import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.EventTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.MuteTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.WordTag
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.IPrivateZapsDecryptionCache
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -369,6 +376,66 @@ class DesktopIAccount(
                 }
             }
         }
+    }
+
+    // ----- Moderation write actions (NIP-51 mute list + NIP-56 reports) -----
+
+    /** Mute a user (private entry). Persists to the kind-10000 mute list and hides live. */
+    suspend fun hideUser(pubkeyHex: HexKey) = updateMuteList(UserTag(pubkeyHex), isPrivate = true, add = true)
+
+    /** Un-mute a user. */
+    suspend fun showUser(pubkeyHex: HexKey) = updateMuteList(UserTag(pubkeyHex), isPrivate = true, add = false)
+
+    /** Hide a word/phrase (private entry). Notes containing it collapse. */
+    suspend fun hideWord(word: String) = updateMuteList(WordTag(word), isPrivate = true, add = true)
+
+    suspend fun showWord(word: String) = updateMuteList(WordTag(word), isPrivate = true, add = false)
+
+    /** Mute a thread by its root event id. */
+    suspend fun hideThread(rootIdHex: HexKey) = updateMuteList(EventTag(rootIdHex), isPrivate = true, add = true)
+
+    suspend fun showThread(rootIdHex: HexKey) = updateMuteList(EventTag(rootIdHex), isPrivate = true, add = false)
+
+    private suspend fun updateMuteList(
+        tag: MuteTag,
+        isPrivate: Boolean,
+        add: Boolean,
+    ) {
+        if (!isWriteable()) return
+        val current = hiddenUsersState.currentMuteList()
+        val event =
+            when {
+                !add -> if (current != null) MuteListEvent.remove(current, tag, signer) else return
+                current == null -> MuteListEvent.create(tag, isPrivate, signer)
+                else -> MuteListEvent.add(current, tag, isPrivate, signer)
+            }
+        // Optimistic local apply so enforcement + the management screens update
+        // immediately, then fan out to relays.
+        localCache.justConsumeMyOwnEvent(event)
+        relayManager.broadcastToAll(event)
+    }
+
+    /** Publish a NIP-56 (kind 1984) report about a note. */
+    suspend fun report(
+        note: Note,
+        type: ReportType,
+        comment: String = "",
+    ) {
+        if (!isWriteable()) return
+        val reported = note.event ?: return
+        val signed = signer.sign(ReportEvent.build(reported, type, comment))
+        relayManager.broadcastToAll(signed)
+    }
+
+    /** Publish a NIP-56 (kind 1984) report about a user. */
+    suspend fun report(
+        userPubKeyHex: HexKey,
+        type: ReportType,
+        comment: String = "",
+    ) {
+        if (!isWriteable()) return
+        val signed = signer.sign(ReportEvent.build(userPubKeyHex, type, comment))
+        relayManager.broadcastToAll(signed)
     }
 
     private fun addEventToChatroom(

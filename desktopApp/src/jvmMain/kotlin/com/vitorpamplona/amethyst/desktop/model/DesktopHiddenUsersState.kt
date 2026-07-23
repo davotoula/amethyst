@@ -126,6 +126,9 @@ class DesktopHiddenUsersState(
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, LiveHiddenUsers.EMPTY)
 
+    /** The user's current mute list event, or null if none has loaded yet. */
+    fun currentMuteList(): MuteListEvent? = muteListNote.event as? MuteListEvent
+
     fun hideUserTransiently(pubkeyHex: String) {
         transientHiddenUsers.value = transientHiddenUsers.value + pubkeyHex
     }
