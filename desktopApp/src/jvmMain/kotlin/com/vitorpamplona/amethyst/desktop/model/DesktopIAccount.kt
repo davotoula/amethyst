@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -421,9 +422,18 @@ class DesktopIAccount(
         type: ReportType,
         comment: String = "",
     ) {
-        if (!isWriteable()) return
         val reported = note.event ?: return
-        val signed = signer.sign(ReportEvent.build(reported, type, comment))
+        reportEvent(reported, type, comment)
+    }
+
+    /** Publish a NIP-56 (kind 1984) report about a raw event. */
+    suspend fun reportEvent(
+        reportedEvent: Event,
+        type: ReportType,
+        comment: String = "",
+    ) {
+        if (!isWriteable()) return
+        val signed = signer.sign(ReportEvent.build(reportedEvent, type, comment))
         relayManager.broadcastToAll(signed)
     }
 

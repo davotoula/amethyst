@@ -1422,6 +1422,7 @@ private fun AppInner(
                                 LocalNamecoinPreferences provides namecoinPreferences,
                                 LocalNamecoinService provides namecoinService,
                                 LocalSpamExemptKeys provides spamExemptKeys,
+                                com.vitorpamplona.amethyst.desktop.model.LocalDesktopIAccount provides iAccount,
                             ) {
                                 val pendingAuthApprovals by authCoordinator.pendingApprovals.collectAsState()
                                 Column(modifier = Modifier.fillMaxSize()) {

@@ -28,11 +28,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import com.vitorpamplona.amethyst.desktop.model.LocalDesktopIAccount
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
+import kotlinx.coroutines.launch
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 
@@ -58,6 +61,10 @@ fun ShareMenu(
     event: Event,
     relayManager: DesktopRelayConnectionManager,
 ) {
+    val account = LocalDesktopIAccount.current
+    val scope = rememberCoroutineScope()
+    var showReportDialog by remember { mutableStateOf(false) }
+
     DropdownMenu(
         expanded = state.expanded,
         onDismissRequest = { state.dismiss() },
@@ -105,6 +112,40 @@ fun ShareMenu(
             onClick = {
                 relayManager.broadcastToAll(event)
                 state.dismiss()
+            },
+        )
+
+        // Moderation actions require a writeable account (a local signer).
+        if (account != null && account.isWriteable()) {
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text("Mute user") },
+                onClick = {
+                    scope.launch { account.hideUser(event.pubKey) }
+                    state.dismiss()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text("Report…") },
+                onClick = {
+                    showReportDialog = true
+                    state.dismiss()
+                },
+            )
+        }
+    }
+
+    if (showReportDialog && account != null) {
+        ReportNoteDialog(
+            onDismiss = { showReportDialog = false },
+            onReport = { type, comment ->
+                scope.launch { account.reportEvent(event, type, comment) }
+            },
+            onBlockAndReport = { type, comment ->
+                scope.launch {
+                    account.reportEvent(event, type, comment)
+                    account.hideUser(event.pubKey)
+                }
             },
         )
     }
