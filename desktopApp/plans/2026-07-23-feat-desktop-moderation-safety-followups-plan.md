@@ -111,17 +111,22 @@ remaining UI + persistence.
 6. Read-only account → management screen lists render, remove/add disabled.
 
 ## Acceptance Criteria
-- [ ] Muting hides in open threads (replies) + on profile tabs, live.
-- [ ] "Always show sensitive content" toggle persists and flips CW blur app-wide.
-- [ ] Profile screen has working Mute + Report actions (writeable, non-self).
-- [ ] Blocked-users / Hidden-words / Muted-threads screens list current entries,
-      remove publishes the updated mute list and un-hides live; hidden-words has
-      an add field.
-- [ ] All reachable from the Content Filters settings section.
-- [ ] Read-only + bunker accounts behave (no crash; writes disabled).
-- [ ] Unit test: sensitive-content mapping (`true→true`, `false→null`); reuse
-      `DesktopMuteEnforcementTest` for the show-sensitive path.
-- [ ] `spotlessApply` clean; commons + desktopApp compile; tests green.
+- [x] Muting hides in open threads (replies) + on profile tabs, live.
+- [x] "Always show sensitive content" toggle persists and flips CW blur app-wide.
+- [x] Profile screen has working Mute + Report actions (writeable, non-self) —
+      MoreVert overflow.
+- [x] Blocked-users / Hidden-words / Muted-threads lists in
+      `ModerationSettingsSection`; remove publishes the updated mute list and
+      un-hides live; hidden-words has an add field.
+- [x] All reachable from the Content Filters settings section.
+- [x] Read-only + bunker accounts behave (write actions gated on `isWriteable()`;
+      management remove/add hidden for read-only).
+- [x] Unit test: sensitive-content mapping (`true→true`, `false→null`, persists)
+      in `PreferencesSensitiveContentSettingsTest`.
+- [x] `spotlessApply` clean; commons + desktopApp compile; tests green.
+
+**Status: COMPLETE** — commit `49d0518d`. Manual run (`./gradlew :desktopApp:run`)
++ PR remain (nostr-git repo → `ngit-pr` flow).
 
 ## Dependencies & Risks
 - Low risk — all reuse the shipped write API + `LocalDesktopIAccount`. The one
