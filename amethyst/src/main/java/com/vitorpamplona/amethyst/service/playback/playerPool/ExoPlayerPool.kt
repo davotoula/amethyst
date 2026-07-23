@@ -25,6 +25,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import com.vitorpamplona.amethyst.service.playback.PLAYBACK_DIAG_TAG
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -132,17 +133,22 @@ class ExoPlayerPool(
                     Log.d("PlaybackService") { "ExoPlayerPool discarding errored warm player: $preferredMediaId (${error.errorCodeName})" }
                     PcmTapRegistry.unregisterPlayer(warm)
                     warm.release()
-                    liveDecoders.decrementAndGet()
+                    releaseDecoder()
                 } else {
                     Log.d("PlaybackService") { "ExoPlayerPool warm hit: $preferredMediaId" }
                     // Already counted against the decoder budget for as long as it sat warm.
+                    Log.d(PLAYBACK_DIAG_TAG) { "DECODERS warm-hit -> ${liveDecoders.get()} / budget $poolSize (unchanged)" }
                     return warm
                 }
             }
         }
         ensureDecoderHeadroom()
+        // Count only once the player exists — incrementing first leaves a phantom decoder on the
+        // books if builder.build() throws.
+        val player = coldPool.poll() ?: builder.build(context)
         liveDecoders.incrementAndGet()
-        return coldPool.poll() ?: builder.build(context)
+        Log.d(PLAYBACK_DIAG_TAG) { "DECODERS acquire -> ${liveDecoders.get()} / budget $poolSize" }
+        return player
     }
 
     /**
@@ -163,6 +169,15 @@ class ExoPlayerPool(
         while (liveDecoders.get() >= poolSize) {
             if (!evictOldestWarm() && !evictOldestWarmElsewhere()) return
         }
+    }
+
+    // Floored at zero. An under-count is the harmful direction: it lets ensureDecoderHeadroom
+    // hand out more concurrent decoders than the device grants, which surfaces as MediaCodec
+    // NO_MEMORY and "can't play this video". An over-count only costs the warm cache.
+    private fun releaseDecoder(): Int {
+        val now = liveDecoders.updateAndGet { (it - 1).coerceAtLeast(0) }
+        Log.d(PLAYBACK_DIAG_TAG) { "DECODERS release -> $now / budget $poolSize" }
+        return now
     }
 
     private fun evictOldestWarm(): Boolean {
@@ -213,7 +228,7 @@ class ExoPlayerPool(
                 Log.d("PlaybackService") { "ExoPlayerPool dropping errored player: ${player.currentMediaItem?.mediaId} (${error.errorCodeName})" }
                 PcmTapRegistry.unregisterPlayer(player)
                 player.release()
-                liveDecoders.decrementAndGet()
+                releaseDecoder()
                 return@withLock
             }
 
@@ -261,7 +276,7 @@ class ExoPlayerPool(
         // stop() tears the renderers down, which is what actually hands the MediaCodec instance
         // back to the system — so this is the point where the player stops costing budget.
         player.stop()
-        liveDecoders.decrementAndGet()
+        releaseDecoder()
         player.clearVideoSurface()
         player.clearMediaItems()
 
@@ -307,7 +322,6 @@ class ExoPlayerPool(
     }
 
     fun destroy() {
-        livePools.remove(this)
         scope
             .launch {
                 mutex.withLock {
@@ -320,13 +334,30 @@ class ExoPlayerPool(
                     warmSnapshot.forEach {
                         PcmTapRegistry.unregisterPlayer(it.player)
                         it.player.release()
-                        liveDecoders.decrementAndGet()
+                        releaseDecoder()
                     }
                     coldPool.forEach {
                         PcmTapRegistry.unregisterPlayer(it)
                         it.release()
                     }
                     coldPool.clear()
+
+                    // Remove from the shared registry only after this pool has decremented its own
+                    // players, so livePools.isEmpty() becomes true only once EVERY pool has finished
+                    // tearing down. Removing synchronously at the top of destroy() (the previous
+                    // approach) let the first pool's body see an empty list while a sibling's
+                    // decoders were still counted, firing a false drift warning on every ordinary
+                    // two-pool shutdown.
+                    livePools.remove(this@ExoPlayerPool)
+
+                    if (livePools.isEmpty()) {
+                        // Last pool out. A non-zero value here is now a genuine accounting leak —
+                        // a player acquired and never returned — worth seeing.
+                        val stranded = liveDecoders.getAndSet(0)
+                        if (stranded != 0) {
+                            Log.w(PLAYBACK_DIAG_TAG) { "decoder accounting drift at teardown: $stranded" }
+                        }
+                    }
                 }
             }.invokeOnCompletion {
                 scope.cancel()
