@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.model
 
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.INwcSignerState
+import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip02FollowList.Kind3FollowListRepository
@@ -58,6 +59,8 @@ import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClient
 import com.vitorpamplona.quartz.utils.DualCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -138,13 +141,30 @@ class DesktopIAccount(
 
     // ---------------------------------------------------------------------------------
 
-    override val showSensitiveContent: Boolean? = null
+    /**
+     * "Always show sensitive content" preference (NIP-36). `null` = respect
+     * content warnings (blur). Persisted UI toggle is wired in a later phase;
+     * for now it defaults to null so content warnings are honored.
+     */
+    val showSensitiveContentSetting = MutableStateFlow<Boolean?>(null)
 
-    override val hiddenWordsCase: List<DualCase> = emptyList()
+    /**
+     * Mute (kind 10000) + block (kind 30000 `d=mute`) state, assembled into a
+     * live [com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers] used by the
+     * feed filters and [isHidden]/[isAcceptable]. See [DesktopHiddenUsersState].
+     */
+    val hiddenUsersState = DesktopHiddenUsersState(signer, localCache, scope, showSensitiveContentSetting)
 
-    override val hiddenUsersHashCodes: Set<Int> = emptySet()
+    /** Current moderation choices — feeds observe this to re-filter live on mute/block. */
+    val hiddenUsers: StateFlow<LiveHiddenUsers> get() = hiddenUsersState.flow
 
-    override val spammersHashCodes: Set<Int> = emptySet()
+    override val showSensitiveContent: Boolean? get() = hiddenUsersState.flow.value.showSensitiveContent
+
+    override val hiddenWordsCase: List<DualCase> get() = hiddenUsersState.flow.value.hiddenWordsCase
+
+    override val hiddenUsersHashCodes: Set<Int> get() = hiddenUsersState.flow.value.hiddenUsersHashCodes
+
+    override val spammersHashCodes: Set<Int> get() = hiddenUsersState.flow.value.spammersHashCodes
 
     override val chatroomList: ChatroomList = ChatroomList(accountState.pubKeyHex)
     override val marmotGroupList =
@@ -173,12 +193,12 @@ class DesktopIAccount(
 
     override fun followingKeySet(): Set<String> = kind3FollowList.flow.value.authors
 
-    override fun isHidden(user: User): Boolean = false
+    override fun isHidden(user: User): Boolean = hiddenUsersState.flow.value.isUserHidden(user.pubkeyHex)
 
     override fun isAcceptable(note: Note): Boolean {
-        // Accept all notes on desktop for now
         val event = note.event ?: return true
-        return !localCache.hasBeenDeleted(event)
+        if (localCache.hasBeenDeleted(event)) return false
+        return !note.isHiddenFor(hiddenUsersState.flow.value)
     }
 
     override suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<PrivateDmEvent>) {

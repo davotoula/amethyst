@@ -656,15 +656,16 @@ fun FeedScreen(
 
     // DesktopFeedViewModel keyed on feedMode — recreated on mode switch
     val viewModel =
-        remember(feedMode, activeFeedId) {
+        remember(feedMode, activeFeedId, iAccount) {
+            val hidden = { iAccount?.hiddenUsers?.value ?: com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers.EMPTY }
             val filter =
                 when (feedMode) {
                     FeedMode.GLOBAL -> {
-                        DesktopGlobalFeedFilter(localCache)
+                        DesktopGlobalFeedFilter(localCache, hidden)
                     }
 
                     FeedMode.FOLLOWING -> {
-                        DesktopFollowingFeedFilter(localCache) {
+                        DesktopFollowingFeedFilter(localCache, hidden) {
                             localCache.followedUsers.value
                         }
                     }
@@ -675,10 +676,11 @@ fun FeedScreen(
                             activeFeedId ?: "custom",
                             activeFeedSource ?: com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource
                                 .Filter(),
+                            hidden,
                         )
                     }
                 }
-            DesktopFeedViewModel(filter, localCache)
+            DesktopFeedViewModel(filter, localCache, iAccount?.hiddenUsers)
         }
 
     // Cancel old ViewModel's viewModelScope on recreation
