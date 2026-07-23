@@ -185,12 +185,22 @@ fun UserProfileScreen(
 
     val scope = rememberCoroutineScope()
 
+    val iAccount = com.vitorpamplona.amethyst.desktop.model.LocalDesktopIAccount.current
+    val hidden = {
+        iAccount?.hiddenUsers?.value ?: com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers.EMPTY
+    }
+    var showProfileModMenu by remember(pubKeyHex) { mutableStateOf(false) }
+    var showProfileReportDialog by remember(pubKeyHex) { mutableStateOf(false) }
+    val profileHidden by (iAccount?.hiddenUsers ?: kotlinx.coroutines.flow.MutableStateFlow(com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers.EMPTY)).collectAsState()
+    val isUserMuted = profileHidden.isUserHidden(pubKeyHex)
+
     // User's posts — cache-backed via DesktopFeedViewModel
     val profileViewModel =
-        remember(pubKeyHex) {
+        remember(pubKeyHex, iAccount) {
             DesktopFeedViewModel(
-                DesktopProfileFeedFilter(pubKeyHex, localCache),
+                DesktopProfileFeedFilter(pubKeyHex, localCache, hidden = hidden),
                 localCache,
+                iAccount?.hiddenUsers,
             )
         }
     DisposableEffect(profileViewModel) {
@@ -207,10 +217,11 @@ fun UserProfileScreen(
 
     // User's replies — separate VM, same cache. Predicate inside the filter.
     val repliesViewModel =
-        remember(pubKeyHex) {
+        remember(pubKeyHex, iAccount) {
             DesktopFeedViewModel(
-                DesktopProfileFeedFilter(pubKeyHex, localCache, repliesOnly = true),
+                DesktopProfileFeedFilter(pubKeyHex, localCache, repliesOnly = true, hidden = hidden),
                 localCache,
+                iAccount?.hiddenUsers,
             )
         }
     DisposableEffect(repliesViewModel) {
@@ -579,6 +590,45 @@ fun UserProfileScreen(
                                         modifier = Modifier.size(20.dp),
                                     )
                                 }
+                            }
+
+                            // Moderation overflow (mute / report) for other profiles.
+                            if (iAccount != null && iAccount.isWriteable() && pubKeyHex != iAccount.pubKey) {
+                                Box {
+                                    IconButton(
+                                        onClick = { showProfileModMenu = true },
+                                        modifier = Modifier.size(32.dp),
+                                    ) {
+                                        Icon(
+                                            MaterialSymbols.MoreVert,
+                                            contentDescription = "Moderation actions",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                    }
+                                    DropdownMenu(
+                                        expanded = showProfileModMenu,
+                                        onDismissRequest = { showProfileModMenu = false },
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text(if (isUserMuted) "Unmute user" else "Mute user") },
+                                            onClick = {
+                                                scope.launch {
+                                                    if (isUserMuted) iAccount.showUser(pubKeyHex) else iAccount.hideUser(pubKeyHex)
+                                                }
+                                                showProfileModMenu = false
+                                            },
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Report…") },
+                                            onClick = {
+                                                showProfileReportDialog = true
+                                                showProfileModMenu = false
+                                            },
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.width(4.dp))
                             }
 
                             // Follow/Unfollow button for other profiles — compact to
@@ -1192,6 +1242,21 @@ fun UserProfileScreen(
             latestMetadata = latestMetadataEvent,
             latestIdentities = latestIdentitiesEvent,
             onDismiss = { showEditProfile = false },
+        )
+    }
+
+    if (showProfileReportDialog && iAccount != null) {
+        com.vitorpamplona.amethyst.desktop.ui.note.ReportNoteDialog(
+            onDismiss = { showProfileReportDialog = false },
+            onReport = { type, comment ->
+                scope.launch { iAccount.report(pubKeyHex, type, comment) }
+            },
+            onBlockAndReport = { type, comment ->
+                scope.launch {
+                    iAccount.report(pubKeyHex, type, comment)
+                    iAccount.hideUser(pubKeyHex)
+                }
+            },
         )
     }
 }

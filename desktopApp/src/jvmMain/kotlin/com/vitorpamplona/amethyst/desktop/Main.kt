@@ -2659,6 +2659,9 @@ fun RelaySettingsScreen(
                 settings = LocalHashtagSpamSettings.current,
             )
             Spacer(Modifier.height(16.dp))
+            com.vitorpamplona.amethyst.desktop.ui.settings
+                .ModerationSettingsSection()
+            Spacer(Modifier.height(16.dp))
             HorizontalDivider()
             Spacer(Modifier.height(16.dp))
 

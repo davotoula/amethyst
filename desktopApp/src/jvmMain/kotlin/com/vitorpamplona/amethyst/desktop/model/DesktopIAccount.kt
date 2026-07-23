@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListRep
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.commons.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.amethyst.commons.moderation.PreferencesSensitiveContentSettings
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.DmInboxRelayResolver
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
@@ -67,7 +68,6 @@ import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClient
 import com.vitorpamplona.quartz.utils.DualCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
@@ -151,10 +151,14 @@ class DesktopIAccount(
 
     /**
      * "Always show sensitive content" preference (NIP-36). `null` = respect
-     * content warnings (blur). Persisted UI toggle is wired in a later phase;
-     * for now it defaults to null so content warnings are honored.
+     * content warnings (blur), `true` = always show. Persisted via
+     * [PreferencesSensitiveContentSettings] (shared with `amy`); flip it with
+     * [setAlwaysShowSensitive].
      */
-    val showSensitiveContentSetting = MutableStateFlow<Boolean?>(null)
+    private val sensitiveContentSettings = PreferencesSensitiveContentSettings()
+    val showSensitiveContentSetting: StateFlow<Boolean?> = sensitiveContentSettings.showSensitiveContent
+
+    fun setAlwaysShowSensitive(alwaysShow: Boolean) = sensitiveContentSettings.setAlwaysShow(alwaysShow)
 
     /**
      * Mute (kind 10000) + block (kind 30000 `d=mute`) state, assembled into a
