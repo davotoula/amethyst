@@ -3129,9 +3129,11 @@
     <string name="buzz_invite_heading">इस कार्यशाला के साथ जुडें</string>
     <string name="buzz_invite_workspace">कार्यशाला</string>
     <string name="buzz_invite_role">भूमिका</string>
+    <string name="buzz_invite_body">आप कार्यशाला को खोलेंगे एक सुरक्षित क्रमकाभ्यन्तर वीक्षक में इसके नियमों का पुनरीक्षण करने के लिए तथा जुडने की प्रक्रिया सम्पन्न करेंगे। यह आपकी अमेथिस्ट कुंचिका से प्रवेशांकन करेगा। कोई पारणशब्द नहीं।</string>
     <string name="buzz_invite_continue">जालवीक्षक में आगे बढें</string>
     <string name="buzz_invite_invalid">यह एक मान्य बज्स्स आमन्त्रण योजक जैसे नहीं दिखता।</string>
     <string name="buzz_invite_expired">यह आमन्त्रण पुराना हो चुका है। एक नए के लिए पूछें।</string>
+    <string name="buzz_invite_after_browser">वीक्षक में नियमों को स्वीकार करना सम्पन्न करें। तत्पश्चात यहाँ लौट आएँ। आपकी कार्यशाला प्रतीक्षा कर रही होगी।</string>
     <string name="buzz_invite_open_workspace">मेरे कार्यशालाओं को खोलें</string>
     <string name="buzz_import_title">कार्यशाला प्रणालियों का आयात</string>
     <string name="buzz_import_loading">आपके प्रणालियों का खोज…</string>
@@ -3140,6 +3142,7 @@
     <string name="buzz_import_add_all">सब को जोडें</string>
     <string name="buzz_import_added">जोडा गया</string>
     <string name="buzz_import_empty_title">कोई प्रणालियाँ प्राप्त नहीं</string>
+    <string name="buzz_import_empty_body">आप इस पुनःप्रसारक के किसी भी प्रणाली के सदस्य प्रतीत नहीं होते अब तक। पहले वीक्षक में कार्यशाला आमन्त्रण स्वीकार करें। तत्पश्चात पुनःप्रयास करें।</string>
     <string name="relay_group_section_channels">प्रणालियाँ</string>
     <string name="relay_group_section_forums">मंच</string>
     <string name="buzz_agent_working">कार्य मध्य…</string>
@@ -3153,6 +3156,11 @@
     <string name="buzz_invite_dismiss">ठीक</string>
     <string name="buzz_star">प्रणाली ताराचिह्नित करें</string>
     <string name="buzz_unstar">प्रणाली ताराचिह्न हटाएँ</string>
+    <string name="buzz_dm_section_empty">कोई संवाद नहीं अब तक</string>
+    <plurals name="buzz_dm_see_all_count">
+        <item quantity="one">देखें %1$d और संवाद</item>
+        <item quantity="other">देखें सभी %1$d संवाद</item>
+    </plurals>
     <string name="chat_delivery_details_title">सन्देश वितरण</string>
     <string name="close">आवृत</string>
     <string name="chat_delivery_pending">किसी एक पुनःप्रसारक द्वारा इस सन्देश की स्वीकृति की प्रतीक्षा</string>
@@ -4168,6 +4176,11 @@
     <string name="pow_notification_channel_name">श्रमप्रमाण खनन</string>
     <string name="pow_notification_channel_description">उन पत्रों को दिखाता है जो अपने निप॰१३ श्रमप्रमाण का खनन कर रहे हैं जिससे कि वे सम्पन्न हो सके आप क्रमक छोडने के पश्चात।</string>
     <string name="pow_notification_cancel_all">निरस्त</string>
+    <string name="pow_notification_send_without_pow">अभी भेजें</string>
+    <string name="pow_cancel_dialog_title">क्या खनन रोक दें।</string>
+    <string name="pow_cancel_dialog_message">यह पत्र अभी भी अपना श्रमप्रमाण का खनन कर रहा है। आप इसे अभी भेज सकते हैं श्रमप्रमाण के बिना अथवा इसे हटा सकते हैं।</string>
+    <string name="pow_cancel_dialog_send_without_pow">श्रमप्रमाण बिना भेज दें</string>
+    <string name="pow_cancel_dialog_discard">पत्र हटाएँ</string>
     <string name="pow_difficulty_estimate">लगभग %1$s प्रति पत्र इस यन्त्र पर</string>
     <string name="pow_estimate_instant">१ से॰ से न्यून</string>
     <plurals name="pow_estimate_seconds">
