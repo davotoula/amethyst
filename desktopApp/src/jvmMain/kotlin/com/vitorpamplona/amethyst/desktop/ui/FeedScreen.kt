@@ -28,6 +28,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ContextMenuArea
+import androidx.compose.foundation.ContextMenuItem
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
@@ -202,30 +204,69 @@ fun FeedNoteCard(
     forceReveal: Boolean = false,
 ) {
     val event = note.event ?: return
+    val moderationAccount = com.vitorpamplona.amethyst.desktop.model.LocalDesktopIAccount.current
+    val ctxScope = rememberCoroutineScope()
+    var showReportDialog by remember(note.idHex) { mutableStateOf(false) }
+    val canModerate = moderationAccount != null && moderationAccount.isWriteable() && event.pubKey != moderationAccount.pubKey
+
     SpamCheckedNoteRender(
         note = note,
         localCache = localCache,
         forceReveal = forceReveal,
     ) {
-        FeedNoteCardBody(
-            note = note,
-            event = event,
-            relayManager = relayManager,
-            localCache = localCache,
-            account = account,
-            nwcConnection = nwcConnection,
-            onReply = onReply,
-            onZapFeedback = onZapFeedback,
-            onNavigateToProfile = onNavigateToProfile,
-            onNavigateToThread = onNavigateToThread,
-            onImageClick = onImageClick,
-            onMediaClick = onMediaClick,
-            onHashtagClick = onHashtagClick,
-            followedUsers = followedUsers,
-            myPubKeyHex = myPubKeyHex,
-            onFollow = onFollow,
+        // Right-click context menu (Compose Desktop). Mute/Report are only added
+        // for other authors on a writeable account; Copy is always available.
+        ContextMenuArea(items = {
+            buildList {
+                add(ContextMenuItem("Copy text") { copyTextToClipboard(event.content) })
+                if (canModerate && moderationAccount != null) {
+                    add(ContextMenuItem("Mute user") { ctxScope.launch { moderationAccount.hideUser(event.pubKey) } })
+                    add(ContextMenuItem("Report…") { showReportDialog = true })
+                }
+            }
+        }) {
+            FeedNoteCardBody(
+                note = note,
+                event = event,
+                relayManager = relayManager,
+                localCache = localCache,
+                account = account,
+                nwcConnection = nwcConnection,
+                onReply = onReply,
+                onZapFeedback = onZapFeedback,
+                onNavigateToProfile = onNavigateToProfile,
+                onNavigateToThread = onNavigateToThread,
+                onImageClick = onImageClick,
+                onMediaClick = onMediaClick,
+                onHashtagClick = onHashtagClick,
+                followedUsers = followedUsers,
+                myPubKeyHex = myPubKeyHex,
+                onFollow = onFollow,
+            )
+        }
+    }
+
+    if (showReportDialog && moderationAccount != null) {
+        com.vitorpamplona.amethyst.desktop.ui.note.ReportNoteDialog(
+            onDismiss = { showReportDialog = false },
+            onReport = { type, comment ->
+                ctxScope.launch { moderationAccount.reportEvent(event, type, comment) }
+            },
+            onBlockAndReport = { type, comment ->
+                ctxScope.launch {
+                    moderationAccount.reportEvent(event, type, comment)
+                    moderationAccount.hideUser(event.pubKey)
+                }
+            },
         )
     }
+}
+
+private fun copyTextToClipboard(text: String) {
+    java.awt.Toolkit
+        .getDefaultToolkit()
+        .systemClipboard
+        .setContents(java.awt.datatransfer.StringSelection(text), null)
 }
 
 @Composable

@@ -2051,6 +2051,7 @@ fun MainContent(
     CompositionLocalProvider(
         LocalRelayCategories provides relayCategories,
         LocalBlossomServers provides iAccount.blossomServerList.flow,
+        com.vitorpamplona.amethyst.desktop.model.LocalDesktopIAccount provides iAccount,
         com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays provides accountRelays,
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalDesktopCache provides localCache,
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayManager provides relayManager,
