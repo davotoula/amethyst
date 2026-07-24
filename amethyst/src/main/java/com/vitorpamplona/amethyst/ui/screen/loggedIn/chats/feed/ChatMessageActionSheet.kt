@@ -278,7 +278,7 @@ fun ChatMessageActionSheet(
                 SectionDivider()
                 TileRow {
                     ActionTile(MaterialSymbols.Edit, stringRes(R.string.buzz_edit_message)) {
-                        onWantsToEditBuzz!!(note)
+                        onWantsToEditBuzz(note)
                         onDismiss()
                     }
                 }

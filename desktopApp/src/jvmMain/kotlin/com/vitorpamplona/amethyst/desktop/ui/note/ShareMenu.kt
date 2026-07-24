@@ -99,7 +99,7 @@ fun rememberNoteMenuActions(
                     scope.launch { snackbar?.showSnackbar("Broadcast to relays") }
                 },
             )
-            if (canModerate && account != null) {
+            if (canModerate) {
                 add(
                     NoteMenuAction("Mute user") {
                         scope.launch {
