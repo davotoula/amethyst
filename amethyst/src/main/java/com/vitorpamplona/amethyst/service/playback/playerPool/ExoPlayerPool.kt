@@ -146,8 +146,7 @@ class ExoPlayerPool(
         // Count only once the player exists — incrementing first leaves a phantom decoder on the
         // books if builder.build() throws.
         val player = coldPool.poll() ?: builder.build(context)
-        liveDecoders.incrementAndGet()
-        Log.d(PLAYBACK_DIAG_TAG) { "DECODERS acquire -> ${liveDecoders.get()} / budget $poolSize" }
+        acquireDecoder()
         return player
     }
 
@@ -171,13 +170,20 @@ class ExoPlayerPool(
         }
     }
 
+    // acquireDecoder/releaseDecoder are the only two places the shared counter moves, so the
+    // DECODERS trace always logs the value the mutation itself produced (a re-read could show a
+    // sibling pool's concurrent move instead).
+    private fun acquireDecoder() {
+        val now = liveDecoders.incrementAndGet()
+        Log.d(PLAYBACK_DIAG_TAG) { "DECODERS acquire -> $now / budget $poolSize" }
+    }
+
     // Floored at zero. An under-count is the harmful direction: it lets ensureDecoderHeadroom
     // hand out more concurrent decoders than the device grants, which surfaces as MediaCodec
     // NO_MEMORY and "can't play this video". An over-count only costs the warm cache.
-    private fun releaseDecoder(): Int {
+    private fun releaseDecoder() {
         val now = liveDecoders.updateAndGet { (it - 1).coerceAtLeast(0) }
         Log.d(PLAYBACK_DIAG_TAG) { "DECODERS release -> $now / budget $poolSize" }
-        return now
     }
 
     private fun evictOldestWarm(): Boolean {
@@ -208,6 +214,12 @@ class ExoPlayerPool(
             null
         }
 
+    /**
+     * Queues the return on this pool's single main-thread scope. Contract: returns queued before
+     * [destroy] is called run before destroy's teardown — both serialize on the same scope and
+     * [mutex] — so a caller may tear its sessions down synchronously and then destroy the pool
+     * (see MediaSessionPool.destroy).
+     */
     fun releasePlayerAsync(player: ExoPlayer) {
         scope.launch {
             releasePlayer(player)
@@ -342,22 +354,7 @@ class ExoPlayerPool(
                     }
                     coldPool.clear()
 
-                    // Remove from the shared registry only after this pool has decremented its own
-                    // players, so livePools.isEmpty() becomes true only once EVERY pool has finished
-                    // tearing down. Removing synchronously at the top of destroy() (the previous
-                    // approach) let the first pool's body see an empty list while a sibling's
-                    // decoders were still counted, firing a false drift warning on every ordinary
-                    // two-pool shutdown.
-                    livePools.remove(this@ExoPlayerPool)
-
-                    if (livePools.isEmpty()) {
-                        // Last pool out. A non-zero value here is now a genuine accounting leak —
-                        // a player acquired and never returned — worth seeing.
-                        val stranded = liveDecoders.getAndSet(0)
-                        if (stranded != 0) {
-                            Log.w(PLAYBACK_DIAG_TAG) { "decoder accounting drift at teardown: $stranded" }
-                        }
-                    }
+                    poolFinishedTeardown(this@ExoPlayerPool)
                 }
             }.invokeOnCompletion {
                 scope.cancel()
@@ -378,5 +375,20 @@ class ExoPlayerPool(
         // Every pool that hasn't been destroy()'d, so a pool starved of headroom can reclaim a
         // warm player from a sibling instead of overshooting the shared ceiling.
         private val livePools = ConcurrentLinkedQueue<ExoPlayerPool>()
+
+        // A pool calls this only after decrementing its own players, so livePools.isEmpty()
+        // means EVERY pool has finished tearing down — deregistering earlier would let the first
+        // pool out see a sibling's still-counted decoders as drift. The last pool out resets the
+        // shared counter; a non-zero value at that point is a genuine accounting leak (a player
+        // acquired and never returned), worth seeing.
+        private fun poolFinishedTeardown(pool: ExoPlayerPool) {
+            livePools.remove(pool)
+            if (livePools.isEmpty()) {
+                val stranded = liveDecoders.getAndSet(0)
+                if (stranded != 0) {
+                    Log.w(PLAYBACK_DIAG_TAG) { "decoder accounting drift at teardown: $stranded" }
+                }
+            }
+        }
     }
 }

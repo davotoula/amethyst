@@ -140,7 +140,7 @@ class SessionRegistryTest {
         registry.register("b", "B")
         registry.setPlaying("a", true)
         assertEquals(setOf("A", "B"), registry.idleSnapshot().toSet())
-        assertEquals(listOf("A"), registry.playingEntries().toList())
+        assertEquals(listOf("A"), registry.playingEntries())
     }
 
     // The replacement guard uses !== (identity, not equality). This test pins that distinction:

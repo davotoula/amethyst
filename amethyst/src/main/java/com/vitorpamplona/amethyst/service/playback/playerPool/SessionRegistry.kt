@@ -97,9 +97,10 @@ internal class SessionRegistry<T : Any>(
 
     fun get(id: String): T? = playing[id] ?: idle.get(id)
 
-    fun idleSnapshot(): List<T> = idle.snapshot().values.toList()
+    // snapshot() already materializes a detached map, so its values need no second copy.
+    fun idleSnapshot(): Collection<T> = idle.snapshot().values
 
-    // Copies, like idleSnapshot(). Handing out playing.values would be a live view, and a caller
+    // Detached, like idleSnapshot(). Handing out playing.values would be a live view, and a caller
     // that iterated it while a drop fired would get a ConcurrentModificationException. A type whose
     // job is owning reachability should not ship that footgun.
     fun playingEntries(): List<T> = playing.values.toList()
@@ -110,13 +111,15 @@ internal class SessionRegistry<T : Any>(
      * nothing when the entry was already evicted while playing.
      */
     fun drop(id: String): T? {
-        val entry = playing.remove(id) ?: idle.get(id) ?: return null
+        val playingEntry = playing.remove(id)
         suppressDropSignal = true
-        try {
-            idle.remove(id)
-        } finally {
-            suppressDropSignal = false
-        }
+        val idleEntry =
+            try {
+                idle.remove(id)
+            } finally {
+                suppressDropSignal = false
+            }
+        val entry = playingEntry ?: idleEntry ?: return null
         onDropped(entry)
         return entry
     }
