@@ -73,6 +73,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import java.util.concurrent.ConcurrentHashMap
+import java.util.logging.Logger
 
 /**
  * Desktop implementation of IAccount.
@@ -407,17 +408,22 @@ class DesktopIAccount(
         add: Boolean,
     ) {
         if (!isWriteable()) return
-        val current = hiddenUsersState.currentMuteList()
-        val event =
-            when {
-                !add -> if (current != null) MuteListEvent.remove(current, tag, signer) else return
-                current == null -> MuteListEvent.create(tag, isPrivate, signer)
-                else -> MuteListEvent.add(current, tag, isPrivate, signer)
-            }
-        // Optimistic local apply so enforcement + the management screens update
-        // immediately, then fan out to relays.
-        localCache.justConsumeMyOwnEvent(event)
-        relayManager.broadcastToAll(event)
+        try {
+            val current = hiddenUsersState.currentMuteList()
+            val event =
+                when {
+                    !add -> if (current != null) MuteListEvent.remove(current, tag, signer) else return
+                    current == null -> MuteListEvent.create(tag, isPrivate, signer)
+                    else -> MuteListEvent.add(current, tag, isPrivate, signer)
+                }
+            // Optimistic local apply so enforcement + the management screens update
+            // immediately, then fan out to relays.
+            localCache.justConsumeMyOwnEvent(event)
+            publishModeration(event, if (add) "mute+" else "mute-")
+        } catch (e: Exception) {
+            moderationLog.warning("[Moderation] mute list update failed: ${e.message}")
+            throw e
+        }
     }
 
     /** Publish a NIP-56 (kind 1984) report about a note. */
@@ -437,8 +443,13 @@ class DesktopIAccount(
         comment: String = "",
     ) {
         if (!isWriteable()) return
-        val signed = signer.sign(ReportEvent.build(reportedEvent, type, comment))
-        relayManager.broadcastToAll(signed)
+        try {
+            val signed = signer.sign(ReportEvent.build(reportedEvent, type, comment))
+            publishModeration(signed, "report(${type.code})")
+        } catch (e: Exception) {
+            moderationLog.warning("[Moderation] report failed: ${e.message}")
+            throw e
+        }
     }
 
     /** Publish a NIP-56 (kind 1984) report about a user. */
@@ -448,8 +459,30 @@ class DesktopIAccount(
         comment: String = "",
     ) {
         if (!isWriteable()) return
-        val signed = signer.sign(ReportEvent.build(userPubKeyHex, type, comment))
-        relayManager.broadcastToAll(signed)
+        try {
+            val signed = signer.sign(ReportEvent.build(userPubKeyHex, type, comment))
+            publishModeration(signed, "report-user(${type.code})")
+        } catch (e: Exception) {
+            moderationLog.warning("[Moderation] user report failed: ${e.message}")
+            throw e
+        }
+    }
+
+    /**
+     * Broadcast a moderation event and log the outcome — including the relay
+     * count, so a publish to zero connected relays is visible rather than silent.
+     */
+    private fun publishModeration(
+        event: Event,
+        action: String,
+    ) {
+        val relayCount = relayManager.connectedRelays.value.size
+        relayManager.broadcastToAll(event)
+        if (relayCount == 0) {
+            moderationLog.warning("[Moderation] $action kind=${event.kind} id=${event.id.take(8)} → 0 connected relays (not delivered)")
+        } else {
+            moderationLog.info("[Moderation] $action kind=${event.kind} id=${event.id.take(8)} → $relayCount relays")
+        }
     }
 
     private fun addEventToChatroom(
@@ -466,5 +499,6 @@ class DesktopIAccount(
 
     companion object {
         const val CLIENT_TAG_NAME = "Amethyst"
+        private val moderationLog: Logger = Logger.getLogger("DesktopModeration")
     }
 }
