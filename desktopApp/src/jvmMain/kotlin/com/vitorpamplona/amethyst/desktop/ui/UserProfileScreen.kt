@@ -186,6 +186,7 @@ fun UserProfileScreen(
     val scope = rememberCoroutineScope()
 
     val iAccount = com.vitorpamplona.amethyst.desktop.model.LocalDesktopIAccount.current
+    val profileSnackbar = com.vitorpamplona.amethyst.desktop.ui.LocalSnackbarHost.current
     val hidden = {
         iAccount?.hiddenUsers?.value ?: com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers.EMPTY
     }
@@ -614,7 +615,13 @@ fun UserProfileScreen(
                                             text = { Text(if (isUserMuted) "Unmute user" else "Mute user") },
                                             onClick = {
                                                 scope.launch {
-                                                    if (isUserMuted) iAccount.showUser(pubKeyHex) else iAccount.hideUser(pubKeyHex)
+                                                    if (isUserMuted) {
+                                                        iAccount.showUser(pubKeyHex)
+                                                        profileSnackbar?.showSnackbar("Unmuted user")
+                                                    } else {
+                                                        iAccount.hideUser(pubKeyHex)
+                                                        profileSnackbar?.showSnackbar("Muted user")
+                                                    }
                                                 }
                                                 showProfileModMenu = false
                                             },
@@ -1249,12 +1256,24 @@ fun UserProfileScreen(
         com.vitorpamplona.amethyst.desktop.ui.note.ReportNoteDialog(
             onDismiss = { showProfileReportDialog = false },
             onReport = { type, comment ->
-                scope.launch { iAccount.report(pubKeyHex, type, comment) }
+                scope.launch {
+                    try {
+                        iAccount.report(pubKeyHex, type, comment)
+                        profileSnackbar?.showSnackbar("Report sent")
+                    } catch (e: Exception) {
+                        profileSnackbar?.showSnackbar("Report failed: ${e.message}")
+                    }
+                }
             },
             onBlockAndReport = { type, comment ->
                 scope.launch {
-                    iAccount.report(pubKeyHex, type, comment)
-                    iAccount.hideUser(pubKeyHex)
+                    try {
+                        iAccount.report(pubKeyHex, type, comment)
+                        iAccount.hideUser(pubKeyHex)
+                        profileSnackbar?.showSnackbar("Reported & muted")
+                    } catch (e: Exception) {
+                        profileSnackbar?.showSnackbar("Report failed: ${e.message}")
+                    }
                 }
             },
         )

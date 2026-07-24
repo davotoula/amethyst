@@ -204,26 +204,20 @@ fun FeedNoteCard(
     forceReveal: Boolean = false,
 ) {
     val event = note.event ?: return
-    val moderationAccount = com.vitorpamplona.amethyst.desktop.model.LocalDesktopIAccount.current
-    val ctxScope = rememberCoroutineScope()
     var showReportDialog by remember(note.idHex) { mutableStateOf(false) }
-    val canModerate = moderationAccount != null && moderationAccount.isWriteable() && event.pubKey != moderationAccount.pubKey
+    // Same action list the ⋮ overflow uses, so right-click and ⋮ are identical.
+    val menuActions =
+        com.vitorpamplona.amethyst.desktop.ui.note.rememberNoteMenuActions(event, relayManager) {
+            showReportDialog = true
+        }
 
     SpamCheckedNoteRender(
         note = note,
         localCache = localCache,
         forceReveal = forceReveal,
     ) {
-        // Right-click context menu (Compose Desktop). Mute/Report are only added
-        // for other authors on a writeable account; Copy is always available.
         ContextMenuArea(items = {
-            buildList {
-                add(ContextMenuItem("Copy text") { copyTextToClipboard(event.content) })
-                if (canModerate && moderationAccount != null) {
-                    add(ContextMenuItem("Mute user") { ctxScope.launch { moderationAccount.hideUser(event.pubKey) } })
-                    add(ContextMenuItem("Report…") { showReportDialog = true })
-                }
-            }
+            menuActions.map { action -> ContextMenuItem(action.label) { action.onClick() } }
         }) {
             FeedNoteCardBody(
                 note = note,
@@ -246,27 +240,10 @@ fun FeedNoteCard(
         }
     }
 
-    if (showReportDialog && moderationAccount != null) {
-        com.vitorpamplona.amethyst.desktop.ui.note.ReportNoteDialog(
-            onDismiss = { showReportDialog = false },
-            onReport = { type, comment ->
-                ctxScope.launch { moderationAccount.reportEvent(event, type, comment) }
-            },
-            onBlockAndReport = { type, comment ->
-                ctxScope.launch {
-                    moderationAccount.reportEvent(event, type, comment)
-                    moderationAccount.hideUser(event.pubKey)
-                }
-            },
-        )
+    if (showReportDialog) {
+        com.vitorpamplona.amethyst.desktop.ui.note
+            .NoteReportDialog(event) { showReportDialog = false }
     }
-}
-
-private fun copyTextToClipboard(text: String) {
-    java.awt.Toolkit
-        .getDefaultToolkit()
-        .systemClipboard
-        .setContents(java.awt.datatransfer.StringSelection(text), null)
 }
 
 @Composable
